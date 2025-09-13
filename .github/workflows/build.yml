@@ -49,6 +49,11 @@ jobs:
             libtool-bin \
             libreadline-dev \
             libavahi-compat-libdnssd-dev \
+            libavcodec-dev \
+            libavutil-dev \
+            libswscale-dev \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev \
 
       # required version is '>= 2.6.0'
       - name: Install libplist
