@@ -37,9 +37,25 @@ jobs:
             pkg-config \
             libpugixml-dev \
             libusb-1.0-0-dev \
-            libplist-dev \
             libqrencode-dev \
             libirecovery-1.0-dev
+
+      # required version is '>= 2.6.0'
+      - name: Install libplist
+        if: runner.os == 'Linux'
+        run: |
+          git clone https://github.com/libimobiledevice/libplist.git
+          cd libplist
+          ./autogen.sh
+          sudo make install
+
+      - name: Install libtatsu
+        if: runner.os == 'Linux'
+        run: |
+          git clone https://github.com/libimobiledevice/libtatsu.git
+          cd libtatsu
+          ./autogen.sh
+          sudo make install
 
       - name: Install libtatsu
         if: runner.os == 'Linux'
