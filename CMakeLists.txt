@@ -99,12 +99,12 @@ pkg_check_modules(PUGIXML REQUIRED IMPORTED_TARGET pugixml)
 pkg_check_modules(USB REQUIRED IMPORTED_TARGET libusb-1.0)
 pkg_check_modules(PLIST REQUIRED IMPORTED_TARGET libplist-2.0)
 # Use system plist library instead of manually built one - exclude /usr/local/lib
-find_library(PLIST_LIBRARY 
-    NAMES plist-2.0
-    PATHS /usr/lib
-    NO_DEFAULT_PATH
-    REQUIRED
-)
+# find_library(PLIST_LIBRARY 
+#     NAMES plist-2.0
+#     PATHS /usr/lib
+#     NO_DEFAULT_PATH
+#     REQUIRED
+# )
 
 # set(PROJECT_SOURCES
 #    src/*.cpp
