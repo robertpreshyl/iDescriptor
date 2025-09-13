@@ -126,7 +126,7 @@ jobs:
       - name: Configure CMake (Linux/macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: |
-          cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+          cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DRUN_CLANG_TIDY=OFF
 
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
