@@ -21,50 +21,17 @@ DeviceManagerWidget::DeviceManagerWidget(QWidget *parent)
                 emit updateNoDevicesConnected();
             });
 
-    // TODO: doesnt seem to work
-    // connect(
-    //     AppContext::sharedInstance(), &AppContext::devicePairPending, this,
-    //     [this](const QString &udid) {
-    //         QWidget *placeholderWidget = new QWidget();
-    //         QVBoxLayout *layout = new QVBoxLayout(placeholderWidget);
-    //         QLabel *label = new QLabel(
-    //             "Device is not paired. Please pair the device to continue.");
-    //         label->setAlignment(Qt::AlignCenter);
-    //         layout->addWidget(label);
-    //         placeholderWidget->setLayout(layout);
-    //         m_device_menu_widgets[udid.toStdString()] = placeholderWidget;
+    connect(AppContext::sharedInstance(), &AppContext::devicePairPending, this,
+            [this](const QString &udid) {
+                addPendingDevice(udid);
+                emit updateNoDevicesConnected();
+            });
 
-    //         QString tabTitle = QString::fromStdString(udid.toStdString());
-    //         int mostRecentDevice =
-    //             m_deviceManager->addDevice(placeholderWidget, tabTitle);
-    //         m_deviceManager->setCurrentDevice(mostRecentDevice);
-    //         ui->stackedWidget->setCurrentIndex(1); // Show device list page
-    //     });
-
-    // TODO: could use some refactoring
-    // connect(AppContext::sharedInstance(), &AppContext::devicePaired, this,
-    //         [this](iDescriptorDevice *device) {
-    //             qDebug() << "Device paired:"
-    //                      << QString::fromStdString(device->udid);
-
-    //             DeviceMenuWidget *deviceWidget = new
-    //             DeviceMenuWidget(device);
-
-    //             QString tabTitle =
-    //                 QString::fromStdString(device->deviceInfo.productType);
-
-    //             int mostRecentDevice =
-    //                 addDevice(deviceWidget, tabTitle);
-    //             setCurrentDevice(mostRecentDevice);
-    //             // Makes sense ?
-    //             // emit updateNoDevicesConnected()
-
-    //             // Clean up old mapping and update
-    //             if (m_device_menu_widgets.count(device->udid)) {
-    //                 m_device_menu_widgets[device->udid]->deleteLater();
-    //             }
-    //             m_device_menu_widgets[device->udid] = deviceWidget;
-    //         });
+    connect(AppContext::sharedInstance(), &AppContext::devicePaired, this,
+            [this](iDescriptorDevice *device) {
+                addPairedDevice(device);
+                emit updateNoDevicesConnected();
+            });
 
     // connect(AppContext::sharedInstance(), &AppContext::recoveryDeviceRemoved,
     //         this, [this](const QString &ecid) {
@@ -107,16 +74,20 @@ void DeviceManagerWidget::setupUI()
             &DeviceManagerWidget::onSidebarNavigationChanged);
 }
 
-int DeviceManagerWidget::addDevice(iDescriptorDevice *device)
+void DeviceManagerWidget::addDevice(iDescriptorDevice *device)
 {
-
+    if (m_deviceWidgets.contains(device->udid)) {
+        qWarning() << "Device already exists:"
+                   << QString::fromStdString(device->udid);
+        return;
+    }
     qDebug() << "Connect ::deviceAdded Adding:"
              << QString::fromStdString(device->udid);
 
     DeviceMenuWidget *deviceWidget = new DeviceMenuWidget(device, this);
     QString tabTitle = QString::fromStdString(device->deviceInfo.productType);
 
-    int deviceIndex = m_stackedWidget->addWidget(deviceWidget);
+    m_stackedWidget->addWidget(deviceWidget);
     m_deviceWidgets[device->udid] = std::pair{
         deviceWidget, m_sidebar->addToSidebar(tabTitle, device->udid)};
 
@@ -124,8 +95,52 @@ int DeviceManagerWidget::addDevice(iDescriptorDevice *device)
     // if (m_currentDeviceIndex == -1) {
     //     setCurrentDevice(deviceIndex);
     // }
+}
 
-    return deviceIndex;
+void DeviceManagerWidget::addPendingDevice(const QString &udid)
+{
+    qDebug() << "Adding pending device:" << udid;
+
+    DevicePendingWidget *pendingWidget = new DevicePendingWidget(this);
+
+    m_stackedWidget->addWidget(pendingWidget);
+    m_pendingDeviceWidgets[udid.toStdString()] =
+        std::pair{pendingWidget, m_sidebar->addPendingToSidebar(udid)};
+
+    // If this is the first device, make it current
+    // if (m_currentDeviceIndex == -1) {
+    //     setCurrentDevice(deviceIndex);
+    // }
+}
+
+void DeviceManagerWidget::addPairedDevice(iDescriptorDevice *device)
+{
+    qDebug() << "Device paired:" << QString::fromStdString(device->udid);
+
+    // Check if pending device exists
+    if (m_pendingDeviceWidgets.contains(device->udid)) {
+        std::pair<DevicePendingWidget *, DevicePendingSidebarItem *> &pair =
+            m_pendingDeviceWidgets[device->udid];
+
+        // Remove from sidebar if it exists
+        if (pair.second) {
+            qDebug() << "Removing pending device from sidebar:"
+                     << QString::fromStdString(device->udid);
+            m_sidebar->removePendingFromSidebar(pair.second);
+        }
+
+        // Clean up widget if it exists
+        if (pair.first) {
+            qDebug() << "Removing pending device widget:"
+                     << QString::fromStdString(device->udid);
+            m_stackedWidget->removeWidget(pair.first);
+            pair.first->deleteLater();
+        }
+
+        m_pendingDeviceWidgets.remove(device->udid);
+    }
+
+    addDevice(device);
 }
 
 void DeviceManagerWidget::removeDevice(const std::string &uuid)

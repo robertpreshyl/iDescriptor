@@ -34,11 +34,6 @@ AppContext::AppContext(QObject *parent) : QObject{parent}
     // }
 }
 
-bool AppContext::noDevicesConnected() const
-{
-    return (m_devices.isEmpty() && m_recoveryDevices.isEmpty());
-}
-
 void AppContext::handleDBusSignal(const QDBusMessage &msg)
 {
     if (msg.arguments().isEmpty()) {
@@ -72,9 +67,8 @@ void AppContext::addDevice(QString udid, idevice_connection_type conn_type,
         IDescriptorInitDeviceResult initResult =
             init_idescriptor_device(udid.toStdString().c_str());
 
-        qDebug() << "Device initialized: " << udid;
-
-        qDebug() << "Success: " << initResult.success;
+        qDebug() << "init_idescriptor_device success ?: " << initResult.success;
+        qDebug() << "init_idescriptor_device error code: " << initResult.error;
 
         if (!initResult.success) {
             qDebug() << "Failed to initialize device with UDID: " << udid;
@@ -88,13 +82,20 @@ void AppContext::addDevice(QString udid, idevice_connection_type conn_type,
                 // the reason why we don't handle pairing devices here is
                 // because it's less likely that it will be an error typeof
                 // LOCKDOWN_E_PASSWORD_PROTECTED if the device is paired type
-                if (addType == AddType::Regular)
-                    emit devicePairPending(udid);
-            } else if (initResult.error == LOCKDOWN_E_INVALID_HOST_ID) {
-                warn("Device with UDID " + udid +
-                         " is not trusted. Please trust this computer on the "
-                         "device and try again.",
-                     "Warning");
+                if (addType == AddType::Regular) { //  TODO:IMPLEMENT
+                    // emit devicePasswordProtected(udid);
+                };
+            } else if (initResult.error ==
+                       LOCKDOWN_E_PAIRING_DIALOG_RESPONSE_PENDING) {
+                m_pendingDevices.append(udid);
+                // FIXME: if a device never gets paired, it will stay in this
+                // list forever
+                emit devicePairPending(udid);
+
+                // warn("Device with UDID " + udid +
+                //          " is not trusted. Please trust this computer on the
+                //          " "device and try again.",
+                //      "Warning");
             } else {
                 warn("Failed to initialize device with UDID " + udid +
                          ". Error code: " + QString::number(initResult.error),
@@ -102,6 +103,8 @@ void AppContext::addDevice(QString udid, idevice_connection_type conn_type,
             }
             return;
         }
+        qDebug() << "Device initialized: " << udid;
+
         iDescriptorDevice *device = new iDescriptorDevice{
             .udid = udid.toStdString(),
             .conn_type = conn_type,
@@ -113,6 +116,7 @@ void AppContext::addDevice(QString udid, idevice_connection_type conn_type,
         if (addType == AddType::Regular)
             return emit deviceAdded(device);
         emit devicePaired(device);
+        m_pendingDevices.removeAll(udid);
 
     } catch (const std::exception &e) {
         qDebug() << "Exception in onDeviceAdded: " << e.what();
@@ -214,9 +218,10 @@ QList<RecoveryDeviceInfo *> AppContext::getAllRecoveryDevices()
 }
 
 // Returns whether there are any devices connected (regular or recovery)
-bool AppContext::noDevicesConnected()
+bool AppContext::noDevicesConnected() const
 {
-    return (m_devices.isEmpty() && m_recoveryDevices.isEmpty());
+    return (m_devices.isEmpty() && m_recoveryDevices.isEmpty() &&
+            m_pendingDevices.isEmpty());
 }
 
 std::string AppContext::addRecoveryDevice(RecoveryDeviceInfo *deviceInfo)

@@ -1,5 +1,6 @@
 #include "devicesidebarwidget.h"
 #include "clickablewidget.h"
+#include "loadingspinnerwidget.h"
 #include <QDebug>
 #include <QEasingCurve>
 
@@ -266,6 +267,24 @@ DeviceSidebarItem *DeviceSidebarWidget::addToSidebar(const QString &deviceName,
     return item;
 }
 
+DevicePendingSidebarItem *
+DeviceSidebarWidget::addPendingToSidebar(const QString &uuid)
+{
+    DevicePendingSidebarItem *item = new DevicePendingSidebarItem(uuid, this);
+    m_devicePendingSidebarItems.append(item);
+    m_contentLayout->insertWidget(m_contentLayout->count() - 1,
+                                  item); // Insert before stretch
+    return item;
+}
+
+void DeviceSidebarWidget::removePendingFromSidebar(
+    DevicePendingSidebarItem *item)
+{
+    m_devicePendingSidebarItems.removeAll(item);
+    m_contentLayout->removeWidget(item);
+    item->deleteLater();
+}
+
 void DeviceSidebarWidget::setCurrentDevice(std::string uuid)
 {
     if (m_currentDeviceUuid == uuid)
@@ -328,4 +347,23 @@ void DeviceSidebarWidget::updateSelection()
     for (DeviceSidebarItem *item : m_deviceSidebarItems) {
         item->setSelected(item->getDeviceUuid() == m_currentDeviceUuid);
     }
+}
+
+DevicePendingSidebarItem::DevicePendingSidebarItem(const QString &udid,
+                                                   QWidget *parent)
+    : QFrame(parent)
+{
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(5);
+
+    LoadingSpinnerWidget *spinner = new LoadingSpinnerWidget(this);
+    spinner->setFixedSize(16, 16);        // Make it a bit smaller
+    spinner->setColor(QColor("#0d6efd")); // Use a theme color
+
+    QLabel *label = new QLabel("Pairing...", this);
+    layout->addWidget(label);
+    layout->addWidget(spinner);
+
+    setLayout(layout);
 }

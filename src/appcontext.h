@@ -23,7 +23,6 @@ public:
     void removeRecoveryDevice(const QString &udid);
 
     // Returns whether there are any devices connected (regular or recovery)
-    bool noDevicesConnected();
     QList<RecoveryDeviceInfo *> getAllRecoveryDevices();
     ~AppContext();
     void instanceRemoveDevice(QString _udid);
@@ -31,6 +30,7 @@ public:
 private:
     QMap<std::string, iDescriptorDevice *> m_devices;
     QMap<std::string, RecoveryDeviceInfo *> m_recoveryDevices;
+    QStringList m_pendingDevices;
 signals:
     void deviceAdded(iDescriptorDevice *device);
     void deviceRemoved(const std::string &udid);

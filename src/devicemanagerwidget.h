@@ -2,6 +2,7 @@
 #define DEVICEMANAGERWIDGET_H
 
 #include "devicemenuwidget.h"
+#include "devicependingwidget.h"
 #include "devicesidebarwidget.h"
 #include "iDescriptor.h"
 #include <QHBoxLayout>
@@ -16,7 +17,11 @@ class DeviceManagerWidget : public QWidget
 public:
     explicit DeviceManagerWidget(QWidget *parent = nullptr);
 
-    int addDevice(iDescriptorDevice *device);
+    void addDevice(iDescriptorDevice *device);
+    // TODO:udid or uuid ?
+    void addPendingDevice(const QString &udid);
+    void addPairedDevice(iDescriptorDevice *device);
+
     void removeDevice(const std::string &uuid);
     void setCurrentDevice(const std::string &uuid);
     std::string getCurrentDevice() const;
@@ -46,6 +51,11 @@ private:
 
     QMap<std::string, std::pair<DeviceMenuWidget *, DeviceSidebarItem *>>
         m_deviceWidgets; // Map to store devices by UDID
+
+    QMap<std::string,
+         std::pair<DevicePendingWidget *, DevicePendingSidebarItem *>>
+        m_pendingDeviceWidgets; // Map to store devices by UDID
+
     std::string m_currentDeviceUuid;
 };
 

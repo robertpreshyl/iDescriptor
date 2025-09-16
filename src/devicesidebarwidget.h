@@ -61,6 +61,18 @@ private:
     QPropertyAnimation *m_collapseAnimation;
 };
 
+#ifndef DEVICEPENDINGSIDEBARITEM_H
+#define DEVICEPENDINGSIDEBARITEM_H
+class DevicePendingSidebarItem : public QFrame
+{
+    Q_OBJECT
+public:
+    explicit DevicePendingSidebarItem(const QString &deviceName,
+                                      QWidget *parent = nullptr);
+signals:
+};
+#endif // DEVICEPENDINGSIDEBARITEM_H
+
 class DeviceSidebarWidget : public QWidget
 {
     Q_OBJECT
@@ -72,6 +84,8 @@ public:
     DeviceSidebarItem *addToSidebar(const QString &deviceName,
                                     const std::string &uuid);
 
+    DevicePendingSidebarItem *addPendingToSidebar(const QString &uuid);
+    void removePendingFromSidebar(DevicePendingSidebarItem *item);
     void setDeviceNavigationSection(int deviceIndex, const QString &section);
     void updateSidebar(std::string uuid);
 
@@ -93,6 +107,7 @@ private:
 
     std::string m_currentDeviceUuid;
     QList<DeviceSidebarItem *> m_deviceSidebarItems;
+    QList<DevicePendingSidebarItem *> m_devicePendingSidebarItems;
 };
 
 #endif // DEVICESIDEBARWIDGET_H
