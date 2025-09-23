@@ -33,13 +33,14 @@ void DeviceSidebarItem::setupUI()
     QVBoxLayout *headerLayout = new QVBoxLayout(m_headerWidget);
     headerLayout->setContentsMargins(0, 0, 0, 0);
     headerLayout->setSpacing(2);
-    m_headerWidget->setStyleSheet("ClickableWidget {  }");
+    m_headerWidget->setStyleSheet(
+        "ClickableWidget { background-color: #ff0000ff; }");
     connect(m_headerWidget, &ClickableWidget::clicked, this,
             [this]() { emit deviceSelected(m_uuid); });
 
     // Device name label
     m_deviceLabel = new QLabel(m_deviceName);
-    m_deviceLabel->setStyleSheet("QLabel { font-weight: bold; color: #333; }");
+    m_deviceLabel->setStyleSheet("QLabel { font-weight: bold;  }");
     m_deviceLabel->setWordWrap(true);
     headerLayout->addWidget(m_deviceLabel);
 
@@ -96,6 +97,7 @@ void DeviceSidebarItem::setupUI()
                            "  text-align: center; "
                            "  border-radius: 3px; "
                            "  font-size: 11px; "
+                           "  color: #212529; "
                            "} "
                            "QPushButton:checked { "
                            "  background-color: #0d6efd; "
@@ -225,12 +227,20 @@ DeviceSidebarWidget::DeviceSidebarWidget(QWidget *parent) : QWidget(parent)
     m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_scrollArea->setFrameStyle(QFrame::NoFrame);
 
+    // Make the scroll area and its viewport transparent
+    m_scrollArea->setStyleSheet(
+        "QScrollArea { background: transparent; border: none; }");
+    m_scrollArea->viewport()->setStyleSheet("background: transparent;");
+
     // Create content widget
     m_contentWidget = new QWidget();
     m_contentLayout = new QVBoxLayout(m_contentWidget);
     m_contentLayout->setContentsMargins(5, 5, 5, 5);
     m_contentLayout->setSpacing(10);
     m_contentLayout->addStretch(); // Push items to top
+
+    // Ensure the content widget is also transparent
+    m_contentWidget->setStyleSheet("background: transparent;");
 
     m_scrollArea->setWidget(m_contentWidget);
     mainLayout->addWidget(m_scrollArea);
@@ -265,6 +275,13 @@ DeviceSidebarItem *DeviceSidebarWidget::addToSidebar(const QString &deviceName,
     // }
 
     return item;
+}
+
+void DeviceSidebarWidget::removeFromSidebar(DeviceSidebarItem *item)
+{
+    m_deviceSidebarItems.removeAll(item);
+    m_contentLayout->removeWidget(item);
+    item->deleteLater();
 }
 
 DevicePendingSidebarItem *

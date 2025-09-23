@@ -144,7 +144,8 @@ QVariant PhotoModel::data(const QModelIndex &index, int role) const
             if (info.fileName.endsWith(".MOV", Qt::CaseInsensitive) ||
                 info.fileName.endsWith(".MP4", Qt::CaseInsensitive) ||
                 info.fileName.endsWith(".M4V", Qt::CaseInsensitive)) {
-                return QIcon::fromTheme("video-x-generic");
+                // return QIcon::fromTheme("video-x-generic");
+                return QIcon(":/icons/video-x-generic.png");
             } else {
                 return QIcon::fromTheme("image-x-generic");
             }
@@ -161,7 +162,8 @@ QVariant PhotoModel::data(const QModelIndex &index, int role) const
         if (info.fileName.endsWith(".MOV", Qt::CaseInsensitive) ||
             info.fileName.endsWith(".MP4", Qt::CaseInsensitive) ||
             info.fileName.endsWith(".M4V", Qt::CaseInsensitive)) {
-            return QIcon::fromTheme("video-x-generic");
+            // return QIcon::fromTheme("video-x-generic");
+            return QIcon(":/icons/video-x-generic.png");
         } else {
             return QIcon::fromTheme("image-x-generic");
         }
@@ -399,6 +401,8 @@ QPixmap PhotoModel::loadImage(iDescriptorDevice *device,
 
 void PhotoModel::populatePhotoPaths()
 {
+    // TODO:beginResetModel called on PhotoModel(0x600002d12a40) without calling
+    // endResetModel first
     beginResetModel();
     m_allPhotos.clear();
     m_photos.clear();

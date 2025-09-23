@@ -84,8 +84,8 @@ GalleryWidget::GalleryWidget(iDescriptorDevice *device, QWidget *parent)
 void GalleryWidget::setupUI()
 {
     m_mainLayout = new QVBoxLayout(this);
-    m_mainLayout->setContentsMargins(10, 10, 10, 10);
-    m_mainLayout->setSpacing(10);
+    m_mainLayout->setContentsMargins(0, 0, 0, 0);
+    // m_mainLayout->setSpacing(10);
 
     // Setup controls at the top
     setupControlsLayout();
@@ -99,7 +99,21 @@ void GalleryWidget::setupUI()
     m_listView->setIconSize(QSize(120, 120));
     m_listView->setSpacing(10);
     m_listView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    m_listView->setUniformItemSizes(true);
+    // m_listView->setGridSize(QSize(140, 300)); // Fixed grid size
+    // m_listView->setIconSize(QSize(120, 300));
 
+    m_listView->setStyleSheet(
+        "QListView { "
+        "    border-top: 1px solid #c1c1c1ff; " // Gray border for the ListView
+        "    background-color: transparent; "   // Optional: background
+        "    padding: 0px;"
+        "} "
+        "QListView::item { "
+        "    width: 150px; "
+        "    height: 150px; "
+        "    margin: 2px; "
+        "}");
     // Create and set model
     m_model = new PhotoModel(m_device, this);
     m_listView->setModel(m_model);
@@ -142,11 +156,12 @@ void GalleryWidget::setupUI()
 void GalleryWidget::setupControlsLayout()
 {
     m_controlsLayout = new QHBoxLayout();
-    m_controlsLayout->setSpacing(15);
+    m_controlsLayout->setSpacing(5);
+    m_controlsLayout->setContentsMargins(7, 7, 7, 7);
 
     // Sort order combo box
     QLabel *sortLabel = new QLabel("Sort:");
-    sortLabel->setStyleSheet("font-weight: bold; color: #555;");
+    sortLabel->setStyleSheet("font-weight: bold;");
     m_sortComboBox = new QComboBox();
     m_sortComboBox->addItem("Newest First",
                             static_cast<int>(PhotoModel::NewestFirst));
@@ -155,9 +170,7 @@ void GalleryWidget::setupControlsLayout()
     m_sortComboBox->setCurrentIndex(0); // Default to Newest First
     m_sortComboBox->setStyleSheet("QComboBox { "
                                   "  padding: 5px 10px; "
-                                  "  border: 1px solid #ccc; "
                                   "  border-radius: 4px; "
-                                  "  background-color: white; "
                                   "  min-width: 100px; "
                                   "} "
                                   "QComboBox:hover { "
@@ -174,7 +187,7 @@ void GalleryWidget::setupControlsLayout()
 
     // Filter combo box
     QLabel *filterLabel = new QLabel("Filter:");
-    filterLabel->setStyleSheet("font-weight: bold; color: #555;");
+    filterLabel->setStyleSheet("font-weight: bold;");
     m_filterComboBox = new QComboBox();
     m_filterComboBox->addItem("All Media", static_cast<int>(PhotoModel::All));
     m_filterComboBox->addItem("Images Only",
@@ -246,10 +259,7 @@ void GalleryWidget::setupControlsLayout()
     QWidget *controlsWidget = new QWidget();
     controlsWidget->setLayout(m_controlsLayout);
     controlsWidget->setStyleSheet("QWidget { "
-                                  "  background-color: #f8f9fa; "
-                                  "  border: 1px solid #dee2e6; "
-                                  "  border-radius: 6px; "
-                                  "  padding: 10px; "
+                                  "  padding: 2px; "
                                   "}");
 
     m_mainLayout->addWidget(controlsWidget);

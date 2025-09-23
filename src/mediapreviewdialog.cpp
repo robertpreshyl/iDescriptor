@@ -47,8 +47,12 @@ MediaPreviewDialog::MediaPreviewDialog(iDescriptorDevice *device,
                    Qt::WindowCloseButtonHint);
 
     // Use full screen size
-    const QSize screenSize = QApplication::primaryScreen()->availableSize();
+    const QSize screenSize = QApplication::primaryScreen()->size();
     resize(screenSize);
+
+    // Add window transparency
+    setAttribute(Qt::WA_TranslucentBackground);
+    setWindowOpacity(0.99);
 
     setupUI();
     loadMedia();
@@ -702,4 +706,26 @@ void MediaPreviewDialog::onVolumeChanged(int value)
         qDebug() << "Volume changed to:" << value << "%" << "(" << volume
                  << ")";
     }
+}
+
+bool MediaPreviewDialog::event(QEvent *event)
+{
+    // catch platform Close (Cmd+W on macOS)
+    if (event->type() == QEvent::ShortcutOverride) {
+        if (auto *ke = dynamic_cast<QKeyEvent *>(event)) {
+            const Qt::KeyboardModifiers mods = ke->modifiers();
+            if (ke->key() == Qt::Key_W &&
+                (mods & (Qt::MetaModifier | Qt::ControlModifier))) {
+                ke->accept();
+                close();
+                return true;
+            }
+            if (ke->key() == Qt::Key_Escape) {
+                ke->accept();
+                close();
+                return true;
+            }
+        }
+    }
+    return QDialog::event(event);
 }

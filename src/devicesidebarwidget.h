@@ -83,7 +83,7 @@ public:
 
     DeviceSidebarItem *addToSidebar(const QString &deviceName,
                                     const std::string &uuid);
-
+    void removeFromSidebar(DeviceSidebarItem *item);
     DevicePendingSidebarItem *addPendingToSidebar(const QString &uuid);
     void removePendingFromSidebar(DevicePendingSidebarItem *item);
     void setDeviceNavigationSection(int deviceIndex, const QString &section);

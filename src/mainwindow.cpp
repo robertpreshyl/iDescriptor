@@ -116,6 +116,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    setWindowTitle("iDescriptor");
 
     m_deviceManager = new DeviceManagerWidget(this);
     ui->stackedWidget->insertWidget(1, m_deviceManager);
@@ -124,7 +125,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // settings button
     QPushButton *settingsButton = new QPushButton();
-    settingsButton->setIcon(QIcon::fromTheme("settings"));
+    settingsButton->setIcon(QIcon::fromTheme("preferences-system"));
     settingsButton->setToolTip("Settings");
     settingsButton->setFlat(true);
     settingsButton->setCursor(Qt::PointingHandCursor);
@@ -140,13 +141,13 @@ MainWindow::MainWindow(QWidget *parent)
         settingsDialog.setLayout(layout);
         settingsDialog.exec();
     });
-    ui->centralwidget->layout()->addWidget(settingsButton);
-
+    // ui->centralwidget->layout()->addWidget(settingsButton);
     ui->mainTabWidget->widget(1)->layout()->addWidget(new AppsWidget(this));
     ui->mainTabWidget->widget(2)->layout()->addWidget(new ToolboxWidget(this));
     ui->mainTabWidget->widget(3)->layout()->addWidget(
         new JailbrokenWidget(this));
 
+    ui->statusbar->addPermanentWidget(settingsButton);
     irecv_error_t res_recovery =
         irecv_device_event_subscribe(&context, handleCallbackRecovery, nullptr);
 

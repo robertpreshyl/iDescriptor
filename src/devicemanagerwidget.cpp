@@ -147,14 +147,17 @@ void DeviceManagerWidget::removeDevice(const std::string &uuid)
 {
 
     qDebug() << "Removing:" << QString::fromStdString(uuid);
-    std::pair<DeviceMenuWidget *, DeviceSidebarItem *> &d =
-        m_deviceWidgets[uuid];
+    DeviceMenuWidget *deviceWidget = m_deviceWidgets[uuid].first;
+    DeviceSidebarItem *sidebarItem = m_deviceWidgets[uuid].second;
 
-    if (d.first != nullptr && d.second != nullptr) {
+    if (deviceWidget != nullptr && sidebarItem != nullptr) {
+        qDebug() << "Device exists removing:" << QString::fromStdString(uuid);
         // TODO: cleanups
         m_deviceWidgets.remove(uuid);
-        delete d.first;
-        delete d.second;
+        m_stackedWidget->removeWidget(deviceWidget);
+        m_sidebar->removeFromSidebar(sidebarItem);
+        deviceWidget->deleteLater();
+        // delete d.second;
 
         if (m_deviceWidgets.count() > 0) {
             setCurrentDevice(m_deviceWidgets.firstKey());
