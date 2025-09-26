@@ -43,8 +43,8 @@ DeviceInfoWidget::DeviceInfoWidget(iDescriptorDevice *device, QWidget *parent)
 {
     // Main layout with horizontal orientation
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
-    mainLayout->setContentsMargins(10, 10, 10, 10);
-    mainLayout->setSpacing(10);
+    mainLayout->setContentsMargins(2, 2, 2, 2);
+    mainLayout->setSpacing(2);
 
     QGraphicsScene *scene = new QGraphicsScene(this);
     QGraphicsPixmapItem *pixmapItem =
@@ -61,32 +61,48 @@ DeviceInfoWidget::DeviceInfoWidget(iDescriptorDevice *device, QWidget *parent)
 
     // Right side: Info Table
     QWidget *infoContainer = new QWidget();
-    infoContainer->setObjectName("infoContainer");
-    infoContainer->setStyleSheet("QWidget#infoContainer { "
-                                 "   border: 1px solid #ccc; "
-                                 "   border-radius: 6px; "
-                                 "}");
-    infoContainer->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+    // infoContainer->setObjectName("infoContainer");
+    // infoContainer->setStyleSheet("QWidget#infoContainer { "
+    //                              "   border: 1px solid #ccc; "
+    //                              "   border-radius: 6px; "
+    //                              "}");
+    infoContainer->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 
     QVBoxLayout *infoLayout = new QVBoxLayout(infoContainer);
-    infoLayout->setContentsMargins(15, 15, 15, 15);
-    infoLayout->setSpacing(10);
+    // infoLayout->setContentsMargins(15, 15, 15, 15);
+    // infoLayout->setSpacing(10);
 
     // Header
-    QLabel *headerLabel = new QLabel(
-        "Device: " + QString::fromStdString(device->deviceInfo.productType));
-    headerLabel->setStyleSheet("font-size: 1rem; padding-bottom: 10px; "
-                               "border-bottom: 1px solid #eee; "
-                               "font-weight: bold;");
-    infoLayout->addWidget(headerLabel);
+    QWidget *headerWidget = new QWidget();
+    QHBoxLayout *headerLayout = new QHBoxLayout(headerWidget);
+    // headerLayout->setContentsMargins(0, 0, 0, 0);
+    // headerLayout->setSpacing(10);
+
+    QLabel *devProductType =
+        new QLabel(QString::fromStdString(device->deviceInfo.productType));
+    devProductType->setStyleSheet("font-size: 1rem; font-weight: bold;");
+
+    headerLayout->addWidget(devProductType);
+    infoLayout->addWidget(headerWidget);
+    // add spacer
+    infoLayout->addSpacerItem(
+        new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding));
+    // Add maximum stretch between header and grid
+    infoLayout->addStretch();
 
     // Grid for device details
+    QWidget *gridWidget = new QWidget();
+    gridWidget->setObjectName("infoGrid");
+    gridWidget->setStyleSheet("QWidget#infoGrid { "
+                              "   border: 1px solid #ccc; "
+                              "   border-radius: 6px; "
+                              "}");
     QGridLayout *gridLayout = new QGridLayout();
     gridLayout->setSpacing(8);
     gridLayout->setColumnStretch(1, 1); // Allow value column to stretch
     gridLayout->setColumnStretch(
         3, 1); // Allow value column for right side to stretch
-
+    gridWidget->setLayout(gridLayout);
     QList<QPair<QString, QWidget *>> infoItems;
 
     auto createValueLabel = [](const QString &text) {
@@ -194,8 +210,8 @@ DeviceInfoWidget::DeviceInfoWidget(iDescriptorDevice *device, QWidget *parent)
         }
     }
 
-    infoLayout->addLayout(gridLayout);
-    infoLayout->addStretch(); // Pushes footer to the bottom
+    infoLayout->addWidget(gridWidget);
+    // infoLayout->addStretch(); // Pushes footer to the bottom
 
     // Footer
     QLabel *footerLabel =
