@@ -2,8 +2,7 @@
 #define DEVICEINFOWIDGET_H
 #include "batterywidget.h"
 #include "iDescriptor.h"
-#include <QGraphicsScene>
-#include <QGraphicsView>
+#include "responsiveqlabel.h"
 #include <QLabel>
 #include <QTimer>
 #include <QWidget>
@@ -29,8 +28,7 @@ private:
     BatteryWidget *m_batteryWidget;
     QLabel *m_lightningIconLabel;
 
-    QGraphicsView *m_graphicsView = nullptr;
-    QGraphicsScene *m_graphicsScene = nullptr;
+    ResponsiveQLabel *m_deviceImageLabel = nullptr;
 };
 
 #endif // DEVICEINFOWIDGET_H

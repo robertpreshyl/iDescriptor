@@ -71,9 +71,9 @@ void DiskUsageWidget::setupUI()
     m_diskBarContainer = new QWidget(this);
     m_diskBarContainer->setMinimumHeight(20);
     m_diskBarContainer->setMaximumHeight(20);
+    m_diskBarContainer->setObjectName("diskBarContainer");
     m_diskBarContainer->setStyleSheet(
         "QWidget#diskBarContainer { margin: 0; padding: 0; border: none; }");
-    m_diskBarContainer->setObjectName("diskBarContainer");
     m_diskBarLayout = new QHBoxLayout(m_diskBarContainer);
     m_diskBarLayout->setContentsMargins(0, 0, 0, 0);
     m_diskBarLayout->setSpacing(0);
@@ -92,21 +92,30 @@ void DiskUsageWidget::setupUI()
     m_othersBar = new QWidget();
     m_freeBar = new QWidget();
 #endif
+    // required for tooltips to have default styling
+    m_systemBar->setObjectName("systemBar");
+    m_appsBar->setObjectName("appsBar");
+    m_mediaBar->setObjectName("mediaBar");
+    m_othersBar->setObjectName("othersBar");
+    m_freeBar->setObjectName("freeBar");
+
     // Set colors
     m_systemBar->setStyleSheet(
-        "background-color: #a1384d; border: 1px solid"
+        "QWidget#systemBar { background-color: #a1384d; border: 1px solid"
         "#e64a5b; padding: 0; margin: 0; border-top-left-radius: 3px; "
-        "border-bottom-left-radius: 3px;");
-    m_appsBar->setStyleSheet("background-color: #4f869f; border: 1px solid "
-                             "#63b4da; padding: 0; margin: 0;");
-    m_mediaBar->setStyleSheet(
-        "background-color: #2ECC71; border: none; padding: 0; margin: 0;");
-    m_othersBar->setStyleSheet("background-color: #a28729; border: 1px solid "
-                               "#c4a32d; padding: 0; margin: 0;");
+        "border-bottom-left-radius: 3px; }");
+    m_appsBar->setStyleSheet(
+        "QWidget#appsBar { background-color: #4f869f; border: 1px solid "
+        "#63b4da; padding: 0; margin: 0; }");
+    m_mediaBar->setStyleSheet("QWidget#mediaBar { background-color: #2ECC71; "
+                              "border: none; padding: 0; margin: 0; }");
+    m_othersBar->setStyleSheet(
+        "QWidget#othersBar { background-color: #a28729; border: 1px solid "
+        "#c4a32d; padding: 0; margin: 0; }");
     m_freeBar->setStyleSheet(
-        "background-color: #474747; border: 1px solid "
+        "QWidget#freeBar { background-color: #474747; border: 1px solid "
         "#4f4f4f; padding: 0; margin: 0; border-top-right-radius: 3px; "
-        "border-bottom-right-radius: 3px;");
+        "border-bottom-right-radius: 3px; }");
 
     m_diskBarLayout->addWidget(m_systemBar);
     m_diskBarLayout->addWidget(m_appsBar);
@@ -145,6 +154,7 @@ void DiskUsageWidget::setupUI()
     m_legendLayout->addStretch();
 
     m_dataLayout->addLayout(m_legendLayout);
+    // m_dataLayout->addStretch();
 
     m_stackedWidget->addWidget(m_dataPage);
 
@@ -307,12 +317,6 @@ void DiskUsageWidget::updateUI()
     // m_mediaBar->setVisible(m_mediaUsage > 0);
     // m_othersBar->setVisible(m_othersUsage > 0);
     // m_freeBar->setVisible(m_freeSpace > 0);
-}
-
-void DiskUsageWidget::paintEvent(QPaintEvent *event)
-{
-    Q_UNUSED(event);
-    // No custom painting needed - using widgets and layouts
 }
 
 void DiskUsageWidget::fetchData()

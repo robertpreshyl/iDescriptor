@@ -43,9 +43,6 @@ AfcExplorerWidget::AfcExplorerWidget(afc_client_t afcClient,
     loadPath("/");
 
     setupContextMenu();
-    connect(SettingsManager::sharedInstance(),
-            &SettingsManager::favoritePlacesChanged, this,
-            &AfcExplorerWidget::refreshFavoritePlaces);
 }
 
 void AfcExplorerWidget::goBack()
@@ -175,7 +172,7 @@ void AfcExplorerWidget::loadPath(const QString &path)
 
     updateBreadcrumb(path);
 
-    MediaFileTree tree =
+    AFCFileTree tree =
         get_file_tree(m_currentAfcClient, m_device->device, path.toStdString());
     if (!tree.success) {
         m_fileList->addItem("Failed to load directory");
@@ -317,7 +314,6 @@ int AfcExplorerWidget::export_file_to_path(afc_client_t afc,
                                            const char *local_path)
 {
     uint64_t handle = 0;
-    // TODO: implement safe_afc_file_open
     if (afc_file_open(afc, device_path, AFC_FOPEN_RDONLY, &handle) !=
         AFC_E_SUCCESS) {
         qDebug() << "Failed to open file on device:" << device_path;
@@ -332,7 +328,6 @@ int AfcExplorerWidget::export_file_to_path(afc_client_t afc,
 
     char buffer[4096];
     uint32_t bytes_read = 0;
-    // TODO: implement safe_afc_file_read
     while (afc_file_read(afc, handle, buffer, sizeof(buffer), &bytes_read) ==
                AFC_E_SUCCESS &&
            bytes_read > 0) {
@@ -340,7 +335,6 @@ int AfcExplorerWidget::export_file_to_path(afc_client_t afc,
     }
 
     fclose(out);
-    // TODO: implement safe_afc_file_close
     afc_file_close(afc, handle);
     return 0;
 }
@@ -422,9 +416,6 @@ int AfcExplorerWidget::import_file_to_device(afc_client_t afc,
     return 0;
 }
 
-// useAFC2 ,path,
-typedef QPair<bool, QString> SidebarItemData;
-
 void AfcExplorerWidget::setupFileExplorer()
 {
     m_explorer = new QWidget();
@@ -471,22 +462,7 @@ void AfcExplorerWidget::setupFileExplorer()
             &AfcExplorerWidget::onAddToFavoritesClicked);
 }
 
-void AfcExplorerWidget::onSidebarItemClicked(QTreeWidgetItem *item, int column)
-{
-    Q_UNUSED(column)
-
-    bool useAfc2 = item->data(0, Qt::UserRole).value<SidebarItemData>().first;
-    QString path = item->data(0, Qt::UserRole).value<SidebarItemData>().second;
-
-    // if (itemType == "try_install_afc2") {
-    //     onTryInstallAFC2Clicked();
-    //     return;
-    // }
-
-    switchToAFC(useAfc2);
-    loadPath(path);
-}
-
+// todo: implement
 void AfcExplorerWidget::onAddToFavoritesClicked()
 {
     QString currentPath = "/";
@@ -499,23 +475,6 @@ void AfcExplorerWidget::onAddToFavoritesClicked()
         "Enter alias for this location:", QLineEdit::Normal, currentPath, &ok);
     if (ok && !alias.isEmpty()) {
         saveFavoritePlace(currentPath, alias);
-        refreshFavoritePlaces();
-    }
-}
-
-void AfcExplorerWidget::onTryInstallAFC2Clicked()
-{
-    qDebug() << "Clicked on try to install AFC2";
-}
-
-void AfcExplorerWidget::switchToAFC(bool useAFC2)
-{
-    if (useAFC2 && m_device->afc2Client) {
-        m_usingAFC2 = true;
-        m_currentAfcClient = m_device->afc2Client;
-    } else {
-        m_usingAFC2 = false;
-        m_currentAfcClient = m_device->afcClient;
     }
 }
 
@@ -525,15 +484,4 @@ void AfcExplorerWidget::saveFavoritePlace(const QString &path,
     qDebug() << "Saving favorite place:" << alias << "->" << path;
     SettingsManager *settings = SettingsManager::sharedInstance();
     settings->saveFavoritePlace(path, alias);
-}
-
-void AfcExplorerWidget::refreshFavoritePlaces()
-{
-    // // Clear existing favorite items
-    // while (m_favoritePlacesItem->childCount() > 0) {
-    //     delete m_favoritePlacesItem->takeChild(0);
-    // }
-
-    // // Reload favorite places
-    // loadFavoritePlaces();
 }

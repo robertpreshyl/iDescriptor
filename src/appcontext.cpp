@@ -4,6 +4,7 @@
 #include <QDBusMessage>
 #include <QDebug>
 #include <QMessageBox>
+#include <QTimer>
 #include <QUuid>
 
 AppContext *AppContext::sharedInstance()
@@ -75,26 +76,38 @@ void AppContext::addDevice(QString udid, idevice_connection_type conn_type,
             // return onDeviceInitFailed(udid, initResult.error);
             if (initResult.error == LOCKDOWN_E_PASSWORD_PROTECTED) {
                 if (addType == AddType::Regular) {
-                    // FIXME: if a device never gets paired, it will stay in
-                    // this
                     m_pendingDevices.append(udid);
                     emit devicePasswordProtected(udid);
+                    QTimer::singleShot(30000, this, [this, udid]() {
+                        // After 30 seconds, if the device is still pending,
+                        // consider the pairing expired
+                        qDebug()
+                            << "Pairing timer fired for device UDID: " << udid;
+                        if (m_pendingDevices.contains(udid)) {
+                            qDebug()
+                                << "Pairing expired for device UDID: " << udid;
+                            m_pendingDevices.removeAll(udid);
+                            emit devicePairingExpired(udid);
+                        }
+                    });
                 }
             } else if (initResult.error ==
                        LOCKDOWN_E_PAIRING_DIALOG_RESPONSE_PENDING) {
                 m_pendingDevices.append(udid);
-                // FIXME: if a device never gets paired, it will stay in this
-                // list forever
                 emit devicePairPending(udid);
-
-                // warn("Device with UDID " + udid +
-                //          " is not trusted. Please trust this computer on the
-                //          " "device and try again.",
-                //      "Warning");
+                QTimer::singleShot(30000, this, [this, udid]() {
+                    // After 30 seconds, if the device is still pending,
+                    // consider the pairing expired
+                    qDebug() << "Pairing timer fired for device UDID: " << udid;
+                    if (m_pendingDevices.contains(udid)) {
+                        qDebug() << "Pairing expired for device UDID: " << udid;
+                        m_pendingDevices.removeAll(udid);
+                        emit devicePairingExpired(udid);
+                    }
+                });
             } else {
-                warn("Failed to initialize device with UDID " + udid +
-                         ". Error code: " + QString::number(initResult.error),
-                     "Warning");
+                qDebug() << "Unhandled error for device UDID: " << udid
+                         << " Error code: " << initResult.error;
             }
             return;
         }
@@ -116,8 +129,6 @@ void AppContext::addDevice(QString udid, idevice_connection_type conn_type,
 
     } catch (const std::exception &e) {
         qDebug() << "Exception in onDeviceAdded: " << e.what();
-        // QMessageBox::critical(this, "Error", "An error occurred while
-        // processing device information");
     }
 }
 
@@ -130,13 +141,23 @@ void AppContext::removeDevice(QString _udid)
 
 {
     const std::string uuid = _udid.toStdString();
-    if (!m_devices.contains(uuid)) {
-        qDebug() << "Device with UUID " + _udid +
-                        " not found. Please report this issue.";
+    qDebug() << "AppContext::removeDevice device with UUID:"
+             << QString::fromStdString(uuid);
+
+    if (m_pendingDevices.contains(_udid)) {
+        m_pendingDevices.removeAll(_udid);
+        emit devicePairingExpired(_udid);
         return;
+    } else {
+        qDebug() << "Device with UUID " + _udid +
+                        " not found in pending devices.";
     }
 
-    qDebug() << "Removing device with UUID:" << QString::fromStdString(uuid);
+    if (!m_devices.contains(uuid)) {
+        qDebug() << "Device with UUID " + _udid +
+                        " not found in normal devices.";
+        return;
+    }
 
     iDescriptorDevice *device = m_devices[uuid];
     m_devices.remove(uuid);
@@ -148,22 +169,20 @@ void AppContext::removeDevice(QString _udid)
     delete device;
 }
 
-void AppContext::removeRecoveryDevice(QString ecid)
+void AppContext::removeRecoveryDevice(uint64_t ecid)
 {
-    std::string std_ecid = ecid.toStdString();
-    if (!m_recoveryDevices.contains(std_ecid)) {
-        qDebug() << "Device with ECID " + ecid +
+    if (!m_recoveryDevices.contains(ecid)) {
+        qDebug() << "Device with ECID " + QString::number(ecid) +
                         " not found. Please report this issue.";
         return;
     }
 
-    qDebug() << "Removing recovery device with ECID:"
-             << QString::fromStdString(std_ecid);
+    qDebug() << "Removing recovery device with ECID:" << ecid;
 
-    RecoveryDeviceInfo *deviceInfo = m_recoveryDevices[std_ecid];
-    m_recoveryDevices.remove(std_ecid);
-
+    m_recoveryDevices.remove(ecid);
     emit recoveryDeviceRemoved(ecid);
+    iDescriptorRecoveryDevice *deviceInfo = m_recoveryDevices[ecid];
+
     delete deviceInfo;
 }
 
@@ -177,7 +196,7 @@ QList<iDescriptorDevice *> AppContext::getAllDevices()
     return m_devices.values();
 }
 
-QList<RecoveryDeviceInfo *> AppContext::getAllRecoveryDevices()
+QList<iDescriptorRecoveryDevice *> AppContext::getAllRecoveryDevices()
 {
     return m_recoveryDevices.values();
 }
@@ -189,17 +208,27 @@ bool AppContext::noDevicesConnected() const
             m_pendingDevices.isEmpty());
 }
 
-void AppContext::addRecoveryDevice(RecoveryDeviceInfo *deviceInfo)
+void AppContext::addRecoveryDevice(uint64_t ecid)
 {
-    // Generate a unique ID for the recovery device
-    // std::string uuid =
-    // QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
+    IDescriptorInitDeviceResultRecovery res =
+        init_idescriptor_recovery_device(ecid);
 
-    // Add the device to the map
-    // uint64_t to std::string
-    m_recoveryDevices[std::to_string(deviceInfo->ecid)] = deviceInfo;
+    if (!res.success) {
+        qDebug() << "Failed to initialize recovery device with ECID: "
+                 << QString::number(ecid);
+        qDebug() << "Error code: " << res.error;
+        return;
+    }
 
-    emit recoveryDeviceAdded(deviceInfo);
+    iDescriptorRecoveryDevice *recoveryDevice = new iDescriptorRecoveryDevice();
+    recoveryDevice->ecid = res.deviceInfo.ecid;
+    recoveryDevice->mode = res.mode;
+    recoveryDevice->cpid = res.deviceInfo.cpid;
+    recoveryDevice->bdid = res.deviceInfo.bdid;
+    recoveryDevice->displayName = res.displayName;
+
+    m_recoveryDevices[res.deviceInfo.ecid] = recoveryDevice;
+    emit recoveryDeviceAdded(recoveryDevice);
 }
 
 AppContext::~AppContext()

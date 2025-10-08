@@ -5,6 +5,7 @@
 #include "devicependingwidget.h"
 #include "devicesidebarwidget.h"
 #include "iDescriptor.h"
+#include "recoverydeviceinfowidget.h"
 #include <QHBoxLayout>
 #include <QMap>
 #include <QStackedWidget>
@@ -20,28 +21,25 @@ public:
     void setCurrentDevice(const std::string &uuid);
     std::string getCurrentDevice() const;
 
-    // Navigation methods
-    void setDeviceNavigation(int deviceIndex, const QString &section);
-
 signals:
     void deviceChanged(std::string deviceUuid);
-    void sidebarNavigationChanged(std::string deviceUuid,
-                                  const QString &section);
     void updateNoDevicesConnected();
+
 private slots:
-    void onSidebarDeviceChanged(std::string deviceUuid);
-    void onSidebarNavigationChanged(std::string deviceUuid,
-                                    const QString &section);
+    void onDeviceSelectionChanged(const DeviceSelection &selection);
 
 private:
     void setupUI();
 
     void addDevice(iDescriptorDevice *device);
     void removeDevice(const std::string &uuid);
-    void addRecoveryDevice(RecoveryDeviceInfo *device);
+    void addRecoveryDevice(const iDescriptorRecoveryDevice *device);
+    void removeRecoveryDevice(uint64_t ecid);
     // TODO:udid or uuid ?
     void addPendingDevice(const QString &udid, bool locked);
     void addPairedDevice(iDescriptorDevice *device);
+    void removePendingDevice(const QString &udid);
+
     QHBoxLayout *m_mainLayout;
     DeviceSidebarWidget *m_sidebar;
     QStackedWidget *m_stackedWidget;
@@ -52,6 +50,10 @@ private:
     QMap<std::string,
          std::pair<DevicePendingWidget *, DevicePendingSidebarItem *>>
         m_pendingDeviceWidgets; // Map to store devices by UDID
+
+    QMap<uint64_t,
+         std::pair<RecoveryDeviceInfoWidget *, RecoveryDeviceSidebarItem *>>
+        m_recoveryDeviceWidgets; // Map to store recovery devices by ECID
 
     std::string m_currentDeviceUuid;
 };

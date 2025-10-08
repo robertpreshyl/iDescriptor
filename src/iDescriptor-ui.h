@@ -123,6 +123,7 @@ public:
         : QSplitter(orientation, parent)
     {
         setHandleWidth(10);
+        setCursor(Qt::SplitHCursor);
     }
 
 protected:

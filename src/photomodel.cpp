@@ -1,5 +1,6 @@
 
 #include "photomodel.h"
+#include "iDescriptor.h"
 #include "mediastreamermanager.h"
 #include <QDebug>
 #include <QEventLoop>
@@ -14,9 +15,6 @@
 #include <QtConcurrent/QtConcurrent>
 #include <algorithm>
 
-// Forward declare your helper function
-QByteArray read_afc_file_to_byte_array(afc_client_t afcClient,
-                                       const char *path);
 PhotoModel::PhotoModel(iDescriptorDevice *device, QObject *parent)
     : QAbstractListModel(parent), m_device(device), m_thumbnailSize(256, 256),
       m_sortOrder(NewestFirst), m_filterType(All)
@@ -343,6 +341,12 @@ QPixmap PhotoModel::loadThumbnailFromDevice(iDescriptorDevice *device,
         return QPixmap(); // Return empty pixmap on error
     }
 
+    if (filePath.endsWith(".HEIC")) {
+        qDebug() << "Loading HEIC image from data for:" << filePath;
+        QPixmap img = load_heic(imageData);
+        return img.isNull() ? QPixmap() : img;
+    }
+
     // Load pixmap from data
     QPixmap original;
     if (!original.loadFromData(imageData)) {
@@ -384,6 +388,13 @@ QPixmap PhotoModel::loadImage(iDescriptorDevice *device,
         return QPixmap(); // Return empty pixmap on error
     }
 
+    if (filePath.endsWith(".HEIC")) {
+        qDebug() << "Loading HEIC image from data for:" << filePath;
+        QPixmap img = load_heic(imageData);
+        return img.isNull() ? QPixmap() : img;
+    }
+
+    // TODO
     // Load pixmap from data
     QPixmap original;
     if (!original.loadFromData(imageData)) {

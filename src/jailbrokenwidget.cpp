@@ -1,5 +1,6 @@
 #include "jailbrokenwidget.h"
 #include "appcontext.h"
+#include "responsiveqlabel.h"
 #include "sshterminalwidget.h"
 
 #ifdef __linux__
@@ -12,8 +13,6 @@
 #include "iDescriptor.h"
 #include <QButtonGroup>
 #include <QDebug>
-#include <QGraphicsPixmapItem>
-#include <QGraphicsView>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -29,18 +28,15 @@ JailbrokenWidget::JailbrokenWidget(QWidget *parent) : QWidget{parent}
     mainLayout->setContentsMargins(2, 2, 2, 2);
     mainLayout->setSpacing(2);
 
-    QGraphicsScene *scene = new QGraphicsScene(this);
-    QGraphicsPixmapItem *pixmapItem =
-        new QGraphicsPixmapItem(QPixmap(":/resources/iphone.png"));
-    scene->addItem(pixmapItem);
+    // Create responsive image label
+    ResponsiveQLabel *deviceImageLabel = new ResponsiveQLabel(this);
+    deviceImageLabel->setPixmap(QPixmap(":/resources/iphone.png"));
+    deviceImageLabel->setMinimumWidth(200);
+    deviceImageLabel->setSizePolicy(QSizePolicy::Ignored,
+                                    QSizePolicy::Expanding);
+    deviceImageLabel->setStyleSheet("background: transparent; border: none;");
 
-    QGraphicsView *graphicsView = new ResponsiveGraphicsView(scene, this);
-    graphicsView->setRenderHint(QPainter::Antialiasing);
-    graphicsView->setMinimumWidth(200);
-    graphicsView->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
-    graphicsView->setStyleSheet("background:transparent; border: none;");
-
-    mainLayout->addWidget(graphicsView, 1);
+    mainLayout->addWidget(deviceImageLabel, 1);
 
     // Connect to AppContext for device events
     connect(AppContext::sharedInstance(), &AppContext::deviceAdded, this,
@@ -48,7 +44,7 @@ JailbrokenWidget::JailbrokenWidget(QWidget *parent) : QWidget{parent}
     connect(AppContext::sharedInstance(), &AppContext::deviceRemoved, this,
             &JailbrokenWidget::onWiredDeviceRemoved);
 
-#ifdef __linux____
+#ifdef __linux__
     m_wirelessProvider = new AvahiService(this);
     connect(m_wirelessProvider, &AvahiService::deviceAdded, this,
             &JailbrokenWidget::onWirelessDeviceAdded);

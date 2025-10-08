@@ -5,22 +5,22 @@
 #include <libimobiledevice/lockdown.h>
 #include <string.h>
 
-MediaFileTree get_file_tree(afc_client_t afcClient, idevice_t device,
-                            const std::string &path)
+AFCFileTree get_file_tree(afc_client_t afcClient, idevice_t device,
+                          const std::string &path)
 {
 
-    MediaFileTree result;
+    AFCFileTree result;
     result.currentPath = path;
 
     if (afcClient == nullptr) {
         qDebug() << "AFC client is not initialized in get_file_tree";
+        result.success = false;
+        return result;
     }
 
     char **dirs = NULL;
     if (safe_afc_read_directory(afcClient, device, path.c_str(), &dirs) !=
         AFC_E_SUCCESS) {
-        // afc_client_free(afcClient);
-        // lockdownd_service_descriptor_free(lockdownService);
         result.success = false;
         return result;
     }
@@ -30,21 +30,35 @@ MediaFileTree get_file_tree(afc_client_t afcClient, idevice_t device,
         if (entryName == "." || entryName == "..")
             continue;
 
-        // Determine if entry is a directory
         char **info = NULL;
         std::string fullPath = path;
         if (fullPath.back() != '/')
             fullPath += "/";
         fullPath += entryName;
-
         bool isDir = false;
         if (afc_get_file_info(afcClient, fullPath.c_str(), &info) ==
                 AFC_E_SUCCESS &&
             info) {
+            if (entryName == "var") {
+                qDebug() << "File info for var:" << info[0] << info[1]
+                         << info[2] << info[3] << info[4] << info[5];
+            }
             for (int j = 0; info[j]; j += 2) {
                 if (strcmp(info[j], "st_ifmt") == 0) {
-                    if (strcmp(info[j + 1], "S_IFDIR") == 0)
+                    if (strcmp(info[j + 1], "S_IFDIR") == 0) {
                         isDir = true;
+                    } else if (strcmp(info[j + 1], "S_IFLNK") == 0) {
+                        /*symlink*/
+                        char **dir_contents = NULL;
+                        if (afc_read_directory(afcClient, fullPath.c_str(),
+                                               &dir_contents) ==
+                            AFC_E_SUCCESS) {
+                            isDir = true;
+                            if (dir_contents) {
+                                afc_dictionary_free(dir_contents);
+                            }
+                        }
+                    }
                     break;
                 }
             }
@@ -52,10 +66,9 @@ MediaFileTree get_file_tree(afc_client_t afcClient, idevice_t device,
         }
         result.entries.push_back({entryName, isDir});
     }
-    free(dirs);
-    // TODO : Freed when device is disconnected
-    // afc_client_free(afc);
-    // lockdownd_service_descriptor_free(service);
+    if (dirs) {
+        afc_dictionary_free(dirs);
+    }
     result.success = true;
     return result;
 }

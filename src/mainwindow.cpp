@@ -84,18 +84,15 @@ void handleCallbackRecovery(const irecv_device_event_t *event, void *userData)
     switch (event->type) {
     case IRECV_DEVICE_ADD:
         qDebug() << "Recovery device added: ";
-        // TODO: handle recovery device addition
-        QMetaObject::invokeMethod(
-            AppContext::sharedInstance(), "addRecoveryDevice",
-            Qt::QueuedConnection,
-            Q_ARG(RecoveryDeviceInfo *, new RecoveryDeviceInfo(event)));
+        QMetaObject::invokeMethod(AppContext::sharedInstance(),
+                                  "addRecoveryDevice", Qt::QueuedConnection,
+                                  Q_ARG(uint64_t, event->device_info->ecid));
         break;
     case IRECV_DEVICE_REMOVE:
         qDebug() << "Recovery device removed: ";
-        QMetaObject::invokeMethod(
-            AppContext::sharedInstance(), "removeRecoveryDevice",
-            Qt::QueuedConnection,
-            Q_ARG(QString, QString::number(event->device_info->ecid)));
+        QMetaObject::invokeMethod(AppContext::sharedInstance(),
+                                  "removeRecoveryDevice", Qt::QueuedConnection,
+                                  Q_ARG(uint64_t, event->device_info->ecid));
         break;
     default:
         printf("Unhandled recovery event: %d\n", event->type);

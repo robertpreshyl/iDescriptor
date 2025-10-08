@@ -10,6 +10,7 @@
 #include <QPushButton>
 #include <QSplitter>
 #include <QStack>
+#include <QStackedWidget>
 #include <QString>
 #include <QTreeWidget>
 #include <QVBoxLayout>
@@ -23,17 +24,19 @@ public:
     explicit FileExplorerWidget(iDescriptorDevice *device,
                                 QWidget *parent = nullptr);
 
+private slots:
+    void onSidebarItemClicked(QTreeWidgetItem *item, int column);
+
 private:
     QSplitter *m_mainSplitter;
+    QStackedWidget *m_stackedWidget;
     afc_client_t currentAfcClient;
     QTreeWidget *m_sidebarTree;
-    iDescriptorDevice *device;
-    bool usingAFC2;
+    iDescriptorDevice *m_device;
 
     // Tree items
-    QTreeWidgetItem *m_afcDefaultItem;
-    QTreeWidgetItem *m_afcJailbrokenItem;
-    QTreeWidgetItem *m_commonPlacesItem;
+    QTreeWidgetItem *m_defaultAfcItem;
+    QTreeWidgetItem *m_jailbrokenAfcItem;
     QTreeWidgetItem *m_favoritePlacesItem;
 
     void setupSidebar();

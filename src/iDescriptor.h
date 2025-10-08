@@ -140,10 +140,6 @@ struct iDescriptorDevice {
     idevice_connection_type conn_type;
     idevice_t device;
     DeviceInfo deviceInfo;
-    /*
-     inital afc client to start the file explorer and gallery with
-     clients are not long lived, so do not assume this will be valid
-    */
     afc_client_t afcClient;
     afc_client_t afc2Client;
     bool is_iPhone;
@@ -158,85 +154,12 @@ struct IDescriptorInitDeviceResult {
     afc_client_t afc2Client;
 };
 
-// Device model identifier to marketing name mapping
-const std::unordered_map<std::string, std::string> DEVICE_MAP = {
-    {"iPhone1,1", "iPhone 2G"},
-    {"iPhone1,2", "iPhone 3G"},
-    {"iPhone2,1", "iPhone 3GS"},
-    {"iPhone3,1", "iPhone 4 (GSM)"},
-    {"iPhone3,2", "iPhone 4 (GSM Rev A)"},
-    {"iPhone3,3", "iPhone 4 (CDMA)"},
-    {"iPhone4,1", "iPhone 4S"},
-    {"iPhone5,1", "iPhone 5 (GSM)"},
-    {"iPhone5,2", "iPhone 5 (GSM+CDMA)"},
-    {"iPhone5,3", "iPhone 5c (GSM)"},
-    {"iPhone5,4", "iPhone 5c (GSM+CDMA)"},
-    {"iPhone6,1", "iPhone 5s (GSM)"},
-    {"iPhone6,2", "iPhone 5s (GSM+CDMA)"},
-    {"iPhone7,1", "iPhone 6 Plus"},
-    {"iPhone7,2", "iPhone 6"},
-    {"iPhone8,1", "iPhone 6s"},
-    {"iPhone8,2", "iPhone 6s Plus"},
-    {"iPhone8,4", "iPhone SE (1st generation)"},
-    {"iPhone9,1", "iPhone 7 (GSM)"},
-    {"iPhone9,2", "iPhone 7 Plus (GSM)"},
-    {"iPhone9,3", "iPhone 7 (GSM+CDMA)"},
-    {"iPhone9,4", "iPhone 7 Plus (GSM+CDMA)"},
-    {"iPhone10,1", "iPhone 8 (GSM)"},
-    {"iPhone10,2", "iPhone 8 Plus (GSM)"},
-    {"iPhone10,3", "iPhone X (GSM)"},
-    {"iPhone10,4", "iPhone 8 (GSM+CDMA)"},
-    {"iPhone10,5", "iPhone 8 Plus (GSM+CDMA)"},
-    {"iPhone10,6", "iPhone X (GSM+CDMA)"},
-    {"iPhone11,2", "iPhone XS"},
-    {"iPhone11,4", "iPhone XS Max"},
-    {"iPhone11,6", "iPhone XS Max (China)"},
-    {"iPhone11,8", "iPhone XR"},
-    {"iPhone12,1", "iPhone 11"},
-    {"iPhone12,3", "iPhone 11 Pro"},
-    {"iPhone12,5", "iPhone 11 Pro Max"},
-    {"iPhone12,8", "iPhone SE (2nd generation)"},
-    {"iPhone13,1", "iPhone 12 mini"},
-    {"iPhone13,2", "iPhone 12"},
-    {"iPhone13,3", "iPhone 12 Pro"},
-    {"iPhone13,4", "iPhone 12 Pro Max"},
-    {"iPhone14,4", "iPhone 13 mini"},
-    {"iPhone14,5", "iPhone 13"},
-    {"iPhone14,2", "iPhone 13 Pro"},
-    {"iPhone14,3", "iPhone 13 Pro Max"},
-    {"iPhone14,6", "iPhone SE (3rd generation)"},
-    {"iPhone15,2", "iPhone 14 Pro"},
-    {"iPhone15,3", "iPhone 14 Pro Max"},
-    {"iPad1,1", "iPad 1st generation"},
-    {"iPad2,1", "iPad 2 (WiFi)"},
-    {"iPad2,2", "iPad 2 (GSM)"},
-    {"iPad2,3", "iPad 2 (CDMA)"},
-    {"iPad2,4", "iPad 2 (Rev A)"},
-    {"iPad3,1", "iPad 3rd generation (WiFi)"},
-    {"iPad3,2", "iPad 3rd generation (GSM)"},
-};
-
-struct RecoveryDeviceInfo : public QObject {
-    Q_OBJECT
-public:
-    RecoveryDeviceInfo(const irecv_device_event_t *event,
-                       QObject *parent = nullptr)
-        : QObject(parent)
-    {
-        if (event && event->device_info) {
-            ecid = event->device_info->ecid;
-            mode = event->mode;
-            cpid = event->device_info->cpid;
-            bdid = event->device_info->bdid;
-        }
-    }
+struct iDescriptorRecoveryDevice {
     uint64_t ecid;
     irecv_mode mode;
     uint32_t cpid;
     uint32_t bdid;
-    QString product;
-    QString model;
-    QString board_id;
+    const char *displayName;
 };
 
 struct TakeScreenshotResult {
@@ -247,8 +170,10 @@ struct TakeScreenshotResult {
 struct IDescriptorInitDeviceResultRecovery {
     irecv_client_t client = nullptr;
     irecv_device_info deviceInfo;
+    irecv_error_t error;
     bool success = false;
     irecv_mode mode = IRECV_K_RECOVERY_MODE_1;
+    const char *displayName = nullptr;
 };
 
 void warn(const QString &message, const QString &title = "Warning",
@@ -335,14 +260,14 @@ struct MediaEntry {
     bool isDir;
 };
 
-struct MediaFileTree {
+struct AFCFileTree {
     std::vector<MediaEntry> entries;
     bool success;
     std::string currentPath;
 };
 
-MediaFileTree get_file_tree(afc_client_t afcClient, idevice_t device,
-                            const std::string &path = "/");
+AFCFileTree get_file_tree(afc_client_t afcClient, idevice_t device,
+                          const std::string &path = "/");
 
 bool detect_jailbroken(afc_client_t afc);
 
@@ -353,7 +278,7 @@ void get_device_info_xml(const char *udid, int use_network, int simple,
 IDescriptorInitDeviceResult init_idescriptor_device(const char *udid);
 
 IDescriptorInitDeviceResultRecovery
-init_idescriptor_recovery_device(irecv_device_info *info);
+init_idescriptor_recovery_device(uint64_t ecid);
 
 bool set_location(idevice_t device, char *lat, char *lon);
 
@@ -467,3 +392,8 @@ struct NetworkDevice {
         return name == other.name && address == other.address;
     }
 };
+
+QPixmap load_heic(const QByteArray &data);
+
+QByteArray read_afc_file_to_byte_array(afc_client_t afcClient,
+                                       const char *path);

@@ -81,7 +81,7 @@ find_library(TATSU_LIBRARY
 
 # Add QR code generation library
 pkg_check_modules(QRENCODE REQUIRED IMPORTED_TARGET libqrencode)
-
+pkg_check_modules(HEIF REQUIRED IMPORTED_TARGET libheif)
 find_library(IRECOVERY_LIBRARY 
     NAMES irecovery-1.0
     PATHS ${CUSTOM_LIB_PATH}
@@ -230,6 +230,7 @@ target_link_libraries(iDescriptor PRIVATE
     ${SSL_LIBRARY}
     ${CRYPTO_LIBRARY}
     ${SSH_LIBRARY}
+    ${HEIF_LIBRARIES}
     # ${FRIDA_LIBRARY}
     # ${ZIP_LIBRARY}
     PkgConfig::PUGIXML
@@ -237,6 +238,7 @@ target_link_libraries(iDescriptor PRIVATE
     PkgConfig::PLIST
     PkgConfig::QRENCODE
     PkgConfig::QTERMWIDGET
+    PkgConfig::HEIF
     airplay
     ipatool-go
 )

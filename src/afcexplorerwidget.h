@@ -34,9 +34,7 @@ private slots:
     void onFileListContextMenu(const QPoint &pos);
     void onExportClicked();
     void onImportClicked();
-    void onSidebarItemClicked(QTreeWidgetItem *item, int column);
     void onAddToFavoritesClicked();
-    void onTryInstallAFC2Clicked();
 
 private:
     QWidget *m_explorer;
@@ -50,15 +48,12 @@ private:
     iDescriptorDevice *m_device;
 
     // Current AFC mode
-    bool m_usingAFC2;
     afc_client_t m_currentAfcClient;
 
     void setupFileExplorer();
     void loadPath(const QString &path);
     void updateBreadcrumb(const QString &path);
     void saveFavoritePlace(const QString &path, const QString &alias);
-    void refreshFavoritePlaces();
-    void switchToAFC(bool useAFC2);
 
     void setupContextMenu();
     void exportSelectedFile(QListWidgetItem *item);

@@ -69,41 +69,85 @@ signals:
 };
 #endif // DEVICEPENDINGSIDEBARITEM_H
 
+#ifndef RECOVERYDEVICESIDEBARITEM_H
+#define RECOVERYDEVICESIDEBARITEM_H
+class RecoveryDeviceSidebarItem : public QFrame
+{
+    Q_OBJECT
+public:
+    explicit RecoveryDeviceSidebarItem(uint64_t ecid,
+                                       QWidget *parent = nullptr);
+
+    void setSelected(bool selected);
+    bool isSelected() const { return m_selected; }
+
+private:
+    void setupUI();
+    uint64_t m_ecid;
+    bool m_selected = false;
+signals:
+    void recoveryDeviceSelected(uint64_t ecid);
+};
+#endif // RECOVERYDEVICESIDEBARITEM_H
+
+// Unified device selection data
+struct DeviceSelection {
+    enum Type { Normal, Recovery, Pending };
+    Type type;
+    std::string uuid;
+    uint64_t ecid = 0;
+    QString section = "Info";
+
+    DeviceSelection(const std::string &deviceUuid, const QString &nav = "")
+        : type(Normal), uuid(deviceUuid), section(nav)
+    {
+    }
+    DeviceSelection(uint64_t recoveryEcid) : type(Recovery), ecid(recoveryEcid)
+    {
+    }
+    static DeviceSelection pending(const std::string &deviceUuid)
+    {
+        DeviceSelection sel(deviceUuid);
+        sel.type = Pending;
+        return sel;
+    }
+};
+
 class DeviceSidebarWidget : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit DeviceSidebarWidget(QWidget *parent = nullptr);
-    std::string getUuid() const;
 
-    DeviceSidebarItem *addToSidebar(const QString &deviceName,
-                                    const std::string &uuid);
-    void removeFromSidebar(DeviceSidebarItem *item);
-    DevicePendingSidebarItem *addPendingToSidebar(const QString &uuid);
-    void removePendingFromSidebar(DevicePendingSidebarItem *item);
-    void setDeviceNavigationSection(int deviceIndex, const QString &section);
-    void updateSidebar(std::string uuid);
+    // Unified interface
+    DeviceSidebarItem *addDevice(const QString &deviceName,
+                                 const std::string &uuid);
+    DevicePendingSidebarItem *addPendingDevice(const QString &uuid);
+    RecoveryDeviceSidebarItem *addRecoveryDevice(uint64_t ecid);
+
+    void removeDevice(const std::string &uuid);
+    void removePendingDevice(const std::string &uuid);
+    void removeRecoveryDevice(uint64_t ecid);
+
+    void setCurrentSelection(const DeviceSelection &selection);
 
 public slots:
-    void onSidebarNavigationChanged(std::string uuid, const QString &section);
+    void onItemSelected(const DeviceSelection &selection);
 
 signals:
-    void sidebarNavigationChanged(std::string uuid, const QString &section);
-    void deviceNavigationChanged(std::string uuid, const QString &section);
-    void sidebarDeviceChanged(std::string uuid);
+    void deviceSelectionChanged(const DeviceSelection &selection);
 
 private:
     void updateSelection();
-    void onDeviceSelected(std::string uuid);
-    void setCurrentDevice(std::string uuid);
     QScrollArea *m_scrollArea;
     QWidget *m_contentWidget;
     QVBoxLayout *m_contentLayout;
 
-    std::string m_currentDeviceUuid;
-    QList<DeviceSidebarItem *> m_deviceSidebarItems;
-    QList<DevicePendingSidebarItem *> m_devicePendingSidebarItems;
+    DeviceSelection m_currentSelection;
+    QMap<std::string, DeviceSidebarItem *> m_deviceItems;
+    QMap<std::string, DevicePendingSidebarItem *> m_pendingItems;
+    QMap<uint64_t, RecoveryDeviceSidebarItem *> m_recoveryItems;
 };
 
 #endif // DEVICESIDEBARWIDGET_H

@@ -4,12 +4,10 @@
 #include "fileexplorerwidget.h"
 #include "iDescriptor-ui.h"
 #include "iDescriptor.h"
+#include "infolabel.h"
 #include <QApplication>
 #include <QDebug>
 #include <QGraphicsDropShadowEffect>
-#include <QGraphicsPixmapItem>
-#include <QGraphicsScene>
-#include <QGraphicsView>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -32,30 +30,22 @@ DeviceInfoWidget::DeviceInfoWidget(iDescriptorDevice *device, QWidget *parent)
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 10, 0);
     mainLayout->setSpacing(1);
-    m_graphicsScene = new QGraphicsScene(this); // no parent
-    QGraphicsPixmapItem *pixmapItem =
-        new QGraphicsPixmapItem(QPixmap(":/resources/iphone.png"));
-    m_graphicsScene->addItem(pixmapItem);
 
-    m_graphicsView = new ResponsiveGraphicsView(m_graphicsScene, this);
-    m_graphicsView->setRenderHint(QPainter::Antialiasing);
-    m_graphicsView->setMinimumWidth(200);
-    m_graphicsView->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
-    m_graphicsView->setStyleSheet("background: transparent; border: none;");
+    // Create responsive image label
+    m_deviceImageLabel = new ResponsiveQLabel(this);
+    m_deviceImageLabel->setPixmap(QPixmap(":/resources/iphone.png"));
+    m_deviceImageLabel->setMinimumWidth(200);
+    m_deviceImageLabel->setSizePolicy(QSizePolicy::Ignored,
+                                      QSizePolicy::Expanding);
+    m_deviceImageLabel->setStyleSheet("background: transparent; border: none;");
 
-    mainLayout->addWidget(m_graphicsView, 1); // Stretch factor 1
+    mainLayout->addWidget(m_deviceImageLabel, 1); // Stretch factor 1
 
     // Right side: Info Table
     QWidget *infoContainer = new QWidget();
-    // infoContainer->setObjectName("infoContainer");
-    // infoContainer->setStyleSheet("QWidget#infoContainer { "
-    //                              "   border: 1px solid #ccc; "
-    //                              "   border-radius: 6px; "
-    //                              "}");
-    infoContainer->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+    infoContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
 
     QVBoxLayout *infoLayout = new QVBoxLayout(infoContainer);
-    // infoLayout->setSpacing(10);
 
     // Header
     QGroupBox *headerWidget = new QGroupBox();
@@ -128,6 +118,8 @@ DeviceInfoWidget::DeviceInfoWidget(iDescriptorDevice *device, QWidget *parent)
     infoLayout->addStretch();
 
     QGroupBox *gridContainer = new QGroupBox("Device Information");
+    gridContainer->setSizePolicy(QSizePolicy::Expanding,
+                                 QSizePolicy::Preferred);
     QGridLayout *gridLayout = new QGridLayout(); // Set layout on gridWidget
     gridLayout->setSpacing(8);
     gridLayout->setColumnStretch(1, 1); // Allow value column to stretch
@@ -138,7 +130,7 @@ DeviceInfoWidget::DeviceInfoWidget(iDescriptorDevice *device, QWidget *parent)
     QList<QPair<QString, QWidget *>> infoItems;
 
     auto createValueLabel = [](const QString &text) {
-        return new QLabel(text);
+        return new InfoLabel(text);
     };
 
     infoItems.append({"iOS Version:", createValueLabel(QString::fromStdString(
@@ -259,23 +251,16 @@ DeviceInfoWidget::DeviceInfoWidget(iDescriptorDevice *device, QWidget *parent)
     rightSideLayout->setSpacing(10);
     rightSideLayout->addWidget(infoContainer);
     rightSideLayout->addWidget(new DiskUsageWidget(device, this));
-    rightSideLayout->setAlignment(Qt::AlignCenter);
+    // TODO: layout shift cause ?
+    // rightSideLayout->setAlignment(Qt::AlignCenter);
     mainLayout->addLayout(rightSideLayout, 2); // Stretch factor 2
-
     m_updateTimer = new QTimer(this);
     connect(m_updateTimer, &QTimer::timeout, this,
             &DeviceInfoWidget::updateBatteryInfo);
     m_updateTimer->start(30000); // Update every 30 seconds
 }
 
-DeviceInfoWidget::~DeviceInfoWidget()
-{
-    if (m_graphicsView) {
-        m_graphicsView->setScene(
-            nullptr); // prevents QGraphicsScene from calling into view during
-                      // its destructor only needed on macos ?
-    }
-}
+DeviceInfoWidget::~DeviceInfoWidget() {}
 
 void DeviceInfoWidget::onBatteryMoreClicked()
 {

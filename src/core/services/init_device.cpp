@@ -1,9 +1,11 @@
+#include "../../devicedatabase.h"
 #include "../../iDescriptor.h"
 #include "libirecovery.h"
 #include <QDebug>
 #include <libimobiledevice/diagnostics_relay.h>
 #include <libimobiledevice/libimobiledevice.h>
 #include <libimobiledevice/lockdown.h>
+#include <string.h>
 
 std::string safeGetXML(const char *key, pugi::xml_node dict)
 {
@@ -201,7 +203,11 @@ DeviceInfo fullDeviceInfo(const pugi::xml_document &doc,
     }
     // TODO:RegionInfo: LL/A
     std::string rawProductType = safeGet("ProductType");
-    d.productType = parse_product_type(rawProductType);
+    const DeviceDatabaseInfo *info =
+        DeviceDatabase::findByIdentifier(rawProductType);
+    d.productType =
+        info ? info->displayName ? info->marketingName : "Unknown Device"
+             : "Unknown Device";
     d.rawProductType = rawProductType;
     d.jailbroken = detect_jailbroken(afcClient);
     d.is_iPhone = safeGet("DeviceClass") == "iPhone";
@@ -382,22 +388,52 @@ IDescriptorInitDeviceResult init_idescriptor_device(const char *udid)
 }
 
 IDescriptorInitDeviceResultRecovery
-init_idescriptor_recovery_device(irecv_device_info *info)
+init_idescriptor_recovery_device(uint64_t ecid)
 {
     IDescriptorInitDeviceResultRecovery result;
-    result.deviceInfo = *info;
-    uint64_t ecid = info->ecid;
-    // irecv_client_t client = nullptr;
-    // Docs say that clients are not long-lived, so instead of storing, we
-    // create a new one each time we need it. irecv_error_t ret =
-    // irecv_open_with_ecid_and_attempts(&client, ecid,
-    // RECOVERY_CLIENT_CONNECTION_TRIES);
+    irecv_client_t client = nullptr;
+    irecv_error_t ret = IRECV_E_UNKNOWN_ERROR;
+    ret = irecv_open_with_ecid_and_attempts(&client, ecid,
+                                            RECOVERY_CLIENT_CONNECTION_TRIES);
 
-    // if (ret != IRECV_E_SUCCESS)
-    // {
-    //     return result;
-    // }
+    if (ret != IRECV_E_SUCCESS) {
+        result.error = ret;
+        return result;
+    }
+    ret = irecv_get_mode(client, (int *)&result.mode);
 
+    if (ret != IRECV_E_SUCCESS) {
+        result.error = ret;
+        irecv_close(client);
+        return result;
+    }
+
+    const irecv_device_info *deviceInfo = irecv_get_device_info(client);
+    if (!deviceInfo) {
+        result.error = IRECV_E_UNKNOWN_ERROR;
+        irecv_close(client);
+        return result;
+    }
+
+    irecv_device_t device = nullptr;
+    const DeviceDatabaseInfo *info = nullptr;
+    if (irecv_devices_get_device_by_client(client, &device) ==
+            IRECV_E_SUCCESS &&
+        device && device->hardware_model) {
+        qDebug() << "Recovery device hardware_model: "
+                 << device->hardware_model;
+        info =
+            DeviceDatabase::findByHwModel(std::string(device->hardware_model));
+    } else {
+        qDebug() << "Could not resolve hardware_model from client.";
+    }
+
+    result.displayName =
+        info ? (info->displayName ? info->displayName : info->marketingName)
+             : "Unknown Device";
+
+    result.deviceInfo = *deviceInfo;
     result.success = true;
+    irecv_close(client);
     return result;
 }

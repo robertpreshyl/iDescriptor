@@ -1,6 +1,7 @@
 #include "devicesidebarwidget.h"
 #include "iDescriptor-ui.h"
 #include "loadingspinnerwidget.h"
+#include "qprocessindicator.h"
 #include <QDebug>
 
 // DeviceSidebarItem Implementation
@@ -26,8 +27,6 @@ void DeviceSidebarItem::setupUI()
     QVBoxLayout *headerLayout = new QVBoxLayout(m_headerWidget);
     headerLayout->setContentsMargins(0, 0, 0, 0);
     headerLayout->setSpacing(2);
-    m_headerWidget->setStyleSheet(
-        "ClickableWidget { background-color: #ff0000ff; }");
     connect(m_headerWidget, &ClickableWidget::clicked, this,
             [this]() { emit deviceSelected(m_uuid); });
 
@@ -176,15 +175,66 @@ void DeviceSidebarItem::onNavigationButtonClicked()
 {
     QPushButton *button = qobject_cast<QPushButton *>(sender());
     if (button) {
+        // Only emit navigationRequested - this will handle both device
+        // selection and tab switching
         emit navigationRequested(m_uuid, button->text());
-        emit deviceSelected(m_uuid);
+        // Remove this line: emit deviceSelected(m_uuid);
     }
 }
 
 const std::string &DeviceSidebarItem::getDeviceUuid() const { return m_uuid; }
 
+RecoveryDeviceSidebarItem::RecoveryDeviceSidebarItem(uint64_t ecid,
+                                                     QWidget *parent)
+    : QFrame(parent), m_ecid(ecid)
+{
+    setupUI();
+}
+
+void RecoveryDeviceSidebarItem::setupUI()
+{
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(5, 5, 5, 5);
+    mainLayout->setSpacing(5);
+
+    ClickableWidget *headerWidget = new ClickableWidget();
+    connect(headerWidget, &ClickableWidget::clicked, this,
+            [this]() { emit recoveryDeviceSelected(m_ecid); });
+    QVBoxLayout *headerLayout = new QVBoxLayout(headerWidget);
+    headerLayout->setContentsMargins(0, 0, 0, 0);
+
+    QLabel *titleLabel = new QLabel("Recovery Mode");
+    titleLabel->setStyleSheet("QLabel { font-weight: bold; }");
+    titleLabel->setWordWrap(true);
+    headerLayout->addWidget(titleLabel);
+
+    mainLayout->addWidget(headerWidget);
+
+    // Set initial style
+    // Set initial style
+    setStyleSheet("RecoveryDeviceSidebarItem { border: "
+                  "1px solid #e0e0e0; border-radius: 5px; }");
+}
+
+void RecoveryDeviceSidebarItem::setSelected(bool selected)
+{
+    if (m_selected == selected)
+        return;
+
+    m_selected = selected;
+
+    if (selected) {
+        setStyleSheet("RecoveryDeviceSidebarItem { border: "
+                      "2px solid #2196f3; border-radius: 5px; }");
+    } else {
+        setStyleSheet("RecoveryDeviceSidebarItem { border: "
+                      "1px solid #e0e0e0; border-radius: 5px; }");
+    }
+}
+
 // DeviceSidebarWidget Implementation
-DeviceSidebarWidget::DeviceSidebarWidget(QWidget *parent) : QWidget(parent)
+DeviceSidebarWidget::DeviceSidebarWidget(QWidget *parent)
+    : QWidget(parent), m_currentSelection(DeviceSelection(""))
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(10, 10, 10, 10);
@@ -219,119 +269,108 @@ DeviceSidebarWidget::DeviceSidebarWidget(QWidget *parent) : QWidget(parent)
     setMaximumWidth(250);
 }
 
-DeviceSidebarItem *DeviceSidebarWidget::addToSidebar(const QString &deviceName,
-                                                     const std::string &uuid)
+DeviceSidebarItem *DeviceSidebarWidget::addDevice(const QString &deviceName,
+                                                  const std::string &uuid)
 {
     DeviceSidebarItem *item = new DeviceSidebarItem(deviceName, uuid, this);
 
+    // Connect to unified handler
     connect(item, &DeviceSidebarItem::deviceSelected, this,
-            &DeviceSidebarWidget::onDeviceSelected);
+            [this](const std::string &uuid) {
+                onItemSelected(DeviceSelection(uuid));
+            });
     connect(item, &DeviceSidebarItem::navigationRequested, this,
-            &DeviceSidebarWidget::onSidebarNavigationChanged);
+            [this](const std::string &uuid, const QString &section) {
+                onItemSelected(DeviceSelection(uuid, section));
+            });
 
-    // TODO
-    m_currentDeviceUuid = uuid;
-    // item->setSelected(true);
-    m_deviceSidebarItems.append(item);
-    updateSelection();
-    // m_deviceItems.append(item);
-    m_contentLayout->insertWidget(m_contentLayout->count() - 1,
-                                  item); // Insert before stretch
-
-    // Auto-select first device
-    // if (m_currentDeviceIndex == -1) {
-    //     setCurrentDevice(deviceIndex);
-    // }
+    m_deviceItems[uuid] = item;
+    m_contentLayout->insertWidget(m_contentLayout->count() - 1, item);
 
     return item;
-}
-
-void DeviceSidebarWidget::removeFromSidebar(DeviceSidebarItem *item)
-{
-    m_deviceSidebarItems.removeAll(item);
-    m_contentLayout->removeWidget(item);
-    item->deleteLater();
 }
 
 DevicePendingSidebarItem *
-DeviceSidebarWidget::addPendingToSidebar(const QString &uuid)
+DeviceSidebarWidget::addPendingDevice(const QString &uuid)
 {
     DevicePendingSidebarItem *item = new DevicePendingSidebarItem(uuid, this);
-    m_devicePendingSidebarItems.append(item);
-    m_contentLayout->insertWidget(m_contentLayout->count() - 1,
-                                  item); // Insert before stretch
+    m_pendingItems[uuid.toStdString()] = item;
+    m_contentLayout->insertWidget(m_contentLayout->count() - 1, item);
     return item;
 }
 
-void DeviceSidebarWidget::removePendingFromSidebar(
-    DevicePendingSidebarItem *item)
+RecoveryDeviceSidebarItem *DeviceSidebarWidget::addRecoveryDevice(uint64_t ecid)
 {
-    m_devicePendingSidebarItems.removeAll(item);
-    m_contentLayout->removeWidget(item);
-    item->deleteLater();
+    RecoveryDeviceSidebarItem *item = new RecoveryDeviceSidebarItem(ecid, this);
+
+    // Connect to unified handler
+    connect(item, &RecoveryDeviceSidebarItem::recoveryDeviceSelected, this,
+            [this](uint64_t ecid) { onItemSelected(DeviceSelection(ecid)); });
+
+    m_recoveryItems[ecid] = item;
+    m_contentLayout->insertWidget(m_contentLayout->count() - 1, item);
+    return item;
 }
 
-void DeviceSidebarWidget::setCurrentDevice(std::string uuid)
+void DeviceSidebarWidget::removeDevice(const std::string &uuid)
 {
-    if (m_currentDeviceUuid == uuid)
-        return;
-
-    m_currentDeviceUuid = uuid;
-    updateSelection();
-    emit sidebarDeviceChanged(uuid);
-}
-
-void DeviceSidebarWidget::setDeviceNavigationSection(int deviceIndex,
-                                                     const QString &section)
-{
-    // for (DeviceSidebarItem *item : m_deviceItems) {
-    //     if (item->getDeviceIndex() == deviceIndex) {
-    //         // Find and check the appropriate button
-    //         QPushButton *targetButton = nullptr;
-    //         if (section == "Info")
-    //             targetButton = item->findChild<QPushButton *>();
-    //         else if (section == "Apps")
-    //             targetButton = item->findChildren<QPushButton *>().value(1);
-    //         else if (section == "Gallery")
-    //             targetButton = item->findChildren<QPushButton *>().value(2);
-    //         else if (section == "Files")
-    //             targetButton = item->findChildren<QPushButton *>().value(3);
-
-    //         if (targetButton) {
-    //             targetButton->setChecked(true);
-    //         }
-    //         break;
-    //     }
-    // }
-}
-
-void DeviceSidebarWidget::onDeviceSelected(std::string uuid)
-{
-    setCurrentDevice(uuid);
-}
-
-void DeviceSidebarWidget::onSidebarNavigationChanged(std::string uuid,
-                                                     const QString &section)
-{
-    if (uuid != m_currentDeviceUuid) {
-        setCurrentDevice(uuid);
+    if (m_deviceItems.contains(uuid)) {
+        DeviceSidebarItem *item = m_deviceItems[uuid];
+        m_deviceItems.remove(uuid);
+        m_contentLayout->removeWidget(item);
+        item->deleteLater();
     }
-    emit sidebarNavigationChanged(uuid, section);
 }
 
-void DeviceSidebarWidget::updateSidebar(std::string uuid)
+void DeviceSidebarWidget::removePendingDevice(const std::string &uuid)
 {
-    // TODO : need a proper check
-    if (m_deviceSidebarItems.isEmpty())
-        return;
-    m_currentDeviceUuid = uuid;
+    if (m_pendingItems.contains(uuid)) {
+        DevicePendingSidebarItem *item = m_pendingItems[uuid];
+        m_pendingItems.remove(uuid);
+        m_contentLayout->removeWidget(item);
+        item->deleteLater();
+    }
+}
+
+void DeviceSidebarWidget::removeRecoveryDevice(uint64_t ecid)
+{
+    if (m_recoveryItems.contains(ecid)) {
+        RecoveryDeviceSidebarItem *item = m_recoveryItems[ecid];
+        m_recoveryItems.remove(ecid);
+        m_contentLayout->removeWidget(item);
+        item->deleteLater();
+    }
+}
+
+void DeviceSidebarWidget::setCurrentSelection(const DeviceSelection &selection)
+{
+    m_currentSelection = selection;
     updateSelection();
+}
+
+void DeviceSidebarWidget::onItemSelected(const DeviceSelection &selection)
+{
+    setCurrentSelection(selection);
+    emit deviceSelectionChanged(selection);
 }
 
 void DeviceSidebarWidget::updateSelection()
 {
-    for (DeviceSidebarItem *item : m_deviceSidebarItems) {
-        item->setSelected(item->getDeviceUuid() == m_currentDeviceUuid);
+    // Clear all selections first
+    for (auto item : m_deviceItems) {
+        item->setSelected(false);
+    }
+    for (auto item : m_recoveryItems) {
+        item->setSelected(false);
+    }
+
+    // Set selection based on current selection
+    if (m_currentSelection.type == DeviceSelection::Normal &&
+        m_deviceItems.contains(m_currentSelection.uuid)) {
+        m_deviceItems[m_currentSelection.uuid]->setSelected(true);
+    } else if (m_currentSelection.type == DeviceSelection::Recovery &&
+               m_recoveryItems.contains(m_currentSelection.ecid)) {
+        m_recoveryItems[m_currentSelection.ecid]->setSelected(true);
     }
 }
 
@@ -339,15 +378,17 @@ DevicePendingSidebarItem::DevicePendingSidebarItem(const QString &udid,
                                                    QWidget *parent)
     : QFrame(parent)
 {
-    QVBoxLayout *layout = new QVBoxLayout(this);
+    QHBoxLayout *layout = new QHBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(5);
+    layout->setSpacing(1);
 
-    LoadingSpinnerWidget *spinner = new LoadingSpinnerWidget(this);
-    spinner->setFixedSize(16, 16);        // Make it a bit smaller
-    spinner->setColor(QColor("#0d6efd")); // Use a theme color
+    QProcessIndicator *spinner = new QProcessIndicator(this);
+    spinner->setFixedSize(32, 32);
+    spinner->setType(QProcessIndicator::line_rotate);
+    spinner->start();
 
     QLabel *label = new QLabel("Pairing...", this);
+
     layout->addWidget(label);
     layout->addWidget(spinner);
 

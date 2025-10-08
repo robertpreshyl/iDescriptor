@@ -42,54 +42,22 @@ DeviceManagerWidget::DeviceManagerWidget(QWidget *parent)
             });
 
     connect(AppContext::sharedInstance(), &AppContext::recoveryDeviceAdded,
-            this, [this](QObject *recoveryDeviceInfoObj) {
-                if (!recoveryDeviceInfoObj)
-                    return;
-                try {
-                    RecoveryDeviceInfo *device =
-                        qobject_cast<RecoveryDeviceInfo *>(
-                            recoveryDeviceInfoObj);
-                    if (!device) {
-                        qDebug() << "Invalid recovery device info object";
-                        return;
-                    }
-                    // IDescriptorInitDeviceResultRecovery initResult=
-                    // init_idescriptor_recovery_device(deviceInfo);
-
-                    // IDescriptorInitDeviceResult initResult =
-                    // init_idescriptor_device(udid.toStdString().c_str());
-
-                    qDebug() << "Recovery device initialized: " << device->ecid;
-
-                    // std::string added_ecid =
-                    //     AppContext::sharedInstance()->addRecoveryDevice(device);
-
-                    // Create device info widget
-                    RecoveryDeviceInfoWidget *recoveryDeviceInfoWidget =
-                        new RecoveryDeviceInfoWidget(device);
-                    m_stackedWidget->addWidget(recoveryDeviceInfoWidget);
-
-                } catch (...) {
-                    qDebug() << "Error initializing recovery device";
-                }
+            this, [this](const iDescriptorRecoveryDevice *recoveryDeviceInfo) {
+                addRecoveryDevice(recoveryDeviceInfo);
                 emit updateNoDevicesConnected();
             });
 
-    // connect(AppContext::sharedInstance(), &AppContext::recoveryDeviceRemoved,
-    //         this, [this](const QString &ecid) {
-    //             qDebug() << "Removing:" << ecid;
-    //             std::string ecidStr = ecid.toStdString();
-    //             DeviceMenuWidget *deviceWidget =
-    //                 qobject_cast<DeviceMenuWidget *>(
-    //                     m_device_menu_widgets[ecidStr]);
+    connect(AppContext::sharedInstance(), &AppContext::recoveryDeviceRemoved,
+            this, [this](uint64_t ecid) {
+                removeRecoveryDevice(ecid);
+                emit updateNoDevicesConnected();
+            });
 
-    //             if (deviceWidget) {
-    //                 // TODO: Implement proper removal by device index
-    //                 m_device_menu_widgets.erase(ecidStr);
-    //                 delete deviceWidget;
-    //             }
-    //             emit updateNoDevicesConnected();
-    //         });
+    connect(AppContext::sharedInstance(), &AppContext::devicePairingExpired,
+            this, [this](const QString &udid) {
+                removePendingDevice(udid);
+                emit updateNoDevicesConnected();
+            });
 }
 
 void DeviceManagerWidget::setupUI()
@@ -109,10 +77,8 @@ void DeviceManagerWidget::setupUI()
     m_mainLayout->addWidget(m_stackedWidget);
 
     // Connect signals
-    connect(m_sidebar, &DeviceSidebarWidget::sidebarDeviceChanged, this,
-            &DeviceManagerWidget::onSidebarDeviceChanged);
-    connect(m_sidebar, &DeviceSidebarWidget::sidebarNavigationChanged, this,
-            &DeviceManagerWidget::onSidebarNavigationChanged);
+    connect(m_sidebar, &DeviceSidebarWidget::deviceSelectionChanged, this,
+            &DeviceManagerWidget::onDeviceSelectionChanged);
 }
 
 void DeviceManagerWidget::addDevice(iDescriptorDevice *device)
@@ -130,8 +96,8 @@ void DeviceManagerWidget::addDevice(iDescriptorDevice *device)
     QString tabTitle = QString::fromStdString(device->deviceInfo.productType);
 
     m_stackedWidget->addWidget(deviceWidget);
-    m_deviceWidgets[device->udid] = std::pair{
-        deviceWidget, m_sidebar->addToSidebar(tabTitle, device->udid)};
+    m_deviceWidgets[device->udid] =
+        std::pair{deviceWidget, m_sidebar->addDevice(tabTitle, device->udid)};
 
     // todo
     //  If this is the first device, make it current
@@ -140,24 +106,48 @@ void DeviceManagerWidget::addDevice(iDescriptorDevice *device)
     //  }
 }
 
-void DeviceManagerWidget::addRecoveryDevice(RecoveryDeviceInfo *device)
+void DeviceManagerWidget::addRecoveryDevice(
+    const iDescriptorRecoveryDevice *device)
 {
-    // if (m_deviceWidgets.contains(device->ecid)) {
-    //     qWarning() << "Recovery device already exists:"
-    //                << QString::fromStdString(device->ecid);
-    //     return;
-    // }
-    // qDebug() << "Connect ::recoveryDeviceAdded Adding:"
-    //          << QString::fromStdString(device->ecid);
+    try {
+        // Create device info widget
+        RecoveryDeviceInfoWidget *recoveryDeviceInfoWidget =
+            new RecoveryDeviceInfoWidget(device);
+        m_recoveryDeviceWidgets.insert(
+            device->ecid,
+            std::pair{recoveryDeviceInfoWidget,
+                      m_sidebar->addRecoveryDevice(device->ecid)});
+        m_stackedWidget->addWidget(recoveryDeviceInfoWidget);
+
+    } catch (...) {
+        qDebug() << "Error initializing recovery device";
+    }
+}
+
+void DeviceManagerWidget::removeRecoveryDevice(uint64_t ecid)
+{
+    qDebug() << "Removing recovery device with ECID:" << ecid;
+    if (!m_recoveryDeviceWidgets.contains(ecid)) {
+        qDebug() << "Recovery device with ECID" + QString::number(ecid) +
+                        " not found. Please report this issue.";
+        return;
+    }
 
     RecoveryDeviceInfoWidget *deviceWidget =
-        new RecoveryDeviceInfoWidget(device, this);
+        m_recoveryDeviceWidgets[ecid].first;
+    RecoveryDeviceSidebarItem *sidebarItem =
+        m_recoveryDeviceWidgets[ecid].second;
 
-    // QString tabTitle = QString::fromStdString(device->product);
+    if (deviceWidget != nullptr && sidebarItem != nullptr) {
+        qDebug() << "Recovery device exists removing:" << QString::number(ecid);
 
-    m_stackedWidget->addWidget(deviceWidget);
-    // m_deviceWidgets[device->ecid] = std::pair{
-    //     deviceWidget, m_sidebar->addToSidebar(tabTitle, device->ecid)};
+        m_recoveryDeviceWidgets.remove(ecid);
+        m_stackedWidget->removeWidget(deviceWidget);
+        m_sidebar->removeRecoveryDevice(ecid);
+        deviceWidget->deleteLater();
+
+        emit updateNoDevicesConnected();
+    }
 }
 
 void DeviceManagerWidget::addPendingDevice(const QString &udid, bool locked)
@@ -180,12 +170,28 @@ void DeviceManagerWidget::addPendingDevice(const QString &udid, bool locked)
     DevicePendingWidget *pendingWidget = new DevicePendingWidget(locked, this);
     m_stackedWidget->addWidget(pendingWidget);
     m_pendingDeviceWidgets[udid.toStdString()] =
-        std::pair{pendingWidget, m_sidebar->addPendingToSidebar(udid)};
+        std::pair{pendingWidget, m_sidebar->addPendingDevice(udid)};
+}
 
-    // If this is the first device, make it current
-    // if (m_currentDeviceIndex == -1) {
-    //     setCurrentDevice(deviceIndex);
-    // }
+void DeviceManagerWidget::removePendingDevice(const QString &udid)
+{
+    qDebug() << "Removing pending device:" << udid;
+    if (!m_pendingDeviceWidgets.contains(udid.toStdString())) {
+        qDebug() << "Pending device not found:" << udid;
+        return;
+    }
+    std::string udidStr = udid.toStdString();
+    DevicePendingWidget *deviceWidget = m_pendingDeviceWidgets[udidStr].first;
+    DevicePendingSidebarItem *sidebarItem =
+        m_pendingDeviceWidgets[udidStr].second;
+
+    if (deviceWidget != nullptr && sidebarItem != nullptr) {
+        qDebug() << "Pending device exists removing:" << udid;
+        m_pendingDeviceWidgets.remove(udidStr);
+        m_stackedWidget->removeWidget(deviceWidget);
+        m_sidebar->removePendingDevice(udidStr);
+        deviceWidget->deleteLater();
+    }
 }
 
 void DeviceManagerWidget::addPairedDevice(iDescriptorDevice *device)
@@ -201,7 +207,7 @@ void DeviceManagerWidget::addPairedDevice(iDescriptorDevice *device)
         if (pair.second) {
             qDebug() << "Removing pending device from sidebar:"
                      << QString::fromStdString(device->udid);
-            m_sidebar->removePendingFromSidebar(pair.second);
+            m_sidebar->removePendingDevice(device->udid);
         }
 
         // Clean up widget if it exists
@@ -230,13 +236,12 @@ void DeviceManagerWidget::removeDevice(const std::string &uuid)
         // TODO: cleanups
         m_deviceWidgets.remove(uuid);
         m_stackedWidget->removeWidget(deviceWidget);
-        m_sidebar->removeFromSidebar(sidebarItem);
+        m_sidebar->removeDevice(uuid);
         deviceWidget->deleteLater();
-        // delete d.second;
 
+        // TODO:
         if (m_deviceWidgets.count() > 0) {
             setCurrentDevice(m_deviceWidgets.firstKey());
-            m_sidebar->updateSidebar(m_deviceWidgets.firstKey());
         }
     }
 }
@@ -252,15 +257,14 @@ void DeviceManagerWidget::setCurrentDevice(const std::string &uuid)
         return;
     }
 
-    // m_currentDeviceIndex = deviceIndex;
     m_currentDeviceUuid = uuid;
 
-    // // Update sidebar selection
-    // m_sidebar->setCurrentDevice(deviceIndex);
-
-    // // Update stacked widget
+    // Update stacked widget
     QWidget *widget = m_deviceWidgets[uuid].first;
     m_stackedWidget->setCurrentWidget(widget);
+
+    // Update sidebar selection
+    m_sidebar->setCurrentSelection(DeviceSelection(uuid));
 
     emit deviceChanged(uuid);
 }
@@ -270,35 +274,51 @@ std::string DeviceManagerWidget::getCurrentDevice() const
     return m_currentDeviceUuid;
 }
 
-void DeviceManagerWidget::setDeviceNavigation(int deviceIndex,
-                                              const QString &section)
+void DeviceManagerWidget::onDeviceSelectionChanged(
+    const DeviceSelection &selection)
 {
-    m_sidebar->setDeviceNavigationSection(deviceIndex, section);
-    // emit deviceNavigationChanged(deviceIndex, section);
-}
+    // Update sidebar selection
+    m_sidebar->setCurrentSelection(selection);
 
-void DeviceManagerWidget::onSidebarDeviceChanged(std::string deviceUuid)
-{
-    setCurrentDevice(deviceUuid);
-}
+    switch (selection.type) {
+    case DeviceSelection::Normal:
+        if (m_deviceWidgets.contains(selection.uuid)) {
+            if (m_currentDeviceUuid != selection.uuid) {
+                setCurrentDevice(selection.uuid);
+            }
 
-void DeviceManagerWidget::onSidebarNavigationChanged(std::string deviceUuid,
-                                                     const QString &section)
-{
-    if (deviceUuid != m_currentDeviceUuid) {
-        setCurrentDevice(deviceUuid);
+            // Handle navigation section
+            QWidget *tabWidget = m_deviceWidgets[selection.uuid].first;
+            DeviceMenuWidget *deviceMenuWidget =
+                qobject_cast<DeviceMenuWidget *>(tabWidget);
+            qDebug() << "Switching to tab:" << selection.section
+                     << deviceMenuWidget;
+            if (deviceMenuWidget && !selection.section.isEmpty()) {
+                deviceMenuWidget->switchToTab(selection.section);
+            }
+        }
+        break;
+
+    case DeviceSelection::Recovery:
+        if (m_recoveryDeviceWidgets.contains(selection.ecid)) {
+            QWidget *tabWidget = m_recoveryDeviceWidgets[selection.ecid].first;
+            if (tabWidget) {
+                m_stackedWidget->setCurrentWidget(tabWidget);
+                // Clear current device since we're viewing recovery device
+                m_currentDeviceUuid = "";
+            }
+        }
+        break;
+
+    case DeviceSelection::Pending:
+        if (m_pendingDeviceWidgets.contains(selection.uuid)) {
+            QWidget *tabWidget = m_pendingDeviceWidgets[selection.uuid].first;
+            if (tabWidget) {
+                m_stackedWidget->setCurrentWidget(tabWidget);
+                // Clear current device since we're viewing pending device
+                m_currentDeviceUuid = "";
+            }
+        }
+        break;
     }
-
-    QWidget *tabWidget = m_deviceWidgets[deviceUuid].first;
-    DeviceMenuWidget *deviceMenuWidget =
-        qobject_cast<DeviceMenuWidget *>(tabWidget);
-
-    if (deviceMenuWidget) {
-        // Call a method to change the internal tab
-        deviceMenuWidget->switchToTab(section);
-    }
-    // if (deviceIndex != m_currentDeviceIndex) {
-    //     setCurrentDevice(deviceIndex);
-    // }
-    // emit sidebarNavigationChanged(deviceUuid, section);
 }

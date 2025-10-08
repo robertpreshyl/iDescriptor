@@ -1,6 +1,7 @@
 #include "mediastreamer.h"
 #include <QtGlobal>
 
+#include "iDescriptor.h"
 #include <QDebug>
 #include <QFileInfo>
 #include <QHostAddress>
@@ -9,10 +10,6 @@
 #include <QTimer>
 #include <libimobiledevice/afc.h>
 #include <memory>
-
-// Forward declare AFC helper function
-QByteArray read_afc_file_to_byte_array(afc_client_t afcClient,
-                                       const char *path);
 
 MediaStreamer::MediaStreamer(iDescriptorDevice *device, afc_client_t afcClient,
                              const QString &filePath, QObject *parent)

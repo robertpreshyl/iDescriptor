@@ -52,8 +52,8 @@ MediaPreviewDialog::MediaPreviewDialog(iDescriptorDevice *device,
     resize(screenSize);
 
     // Add window transparency
-    setAttribute(Qt::WA_TranslucentBackground);
-    setWindowOpacity(0.99);
+    // looks way too bad on linux - maybe enable only on macOS and Windows
+    // setAttribute(Qt::WA_TranslucentBackground);
 
     setupUI();
     loadMedia();
