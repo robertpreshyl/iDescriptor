@@ -134,11 +134,18 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: ./build
         run: |
-          # Shows excluded libs for debugging
-          ../linuxdeployqt-continuous-x86_64.AppImage iDescriptor -qmldir=../qml -appimage -show-exclude-libs -exclude-libs=libGL,libGLX,libEGL,libOpenGL,libdrm,libva,libvdpau,libxcb,libxcb-glx,libxcb-dri2,libxcb-dri3,libX11,libXext,libXrandr,libXrender,libXfixes,libXau,libXdmcp
-          # Build
-          export VERSION=1.0.0
-          ../linuxdeployqt-continuous-x86_64.AppImage iDescriptor -qmldir=../qml -appimage -exclude-libs=libGL,libGLX,libEGL,libOpenGL,libdrm,libva,libvdpau,libxcb,libxcb-glx,libxcb-dri2,libxcb-dri3,libX11,libXext,libXrandr,libXrender,libXfixes,libXau,libXdmcp -no-strip
+          # Remove problematic system libraries that cause NVIDIA crashes
+            rm -f lib/libxcb-glx.so* lib/libXrandr.so* lib/libXext.so* lib/libXrender.so* lib/libXfixes.so* lib/libXau.so* lib/libXdmcp.so*
+            # Optional: remove bundled C++ runtime (use system's)
+            rm -f lib/libstdc++.so* lib/libgcc_s.so*
+
+            # Now run linuxdeployqt
+            export VERSION=1.0.0
+            ../linuxdeployqt-continuous-x86_64.AppImage iDescriptor \
+              -qmldir=../qml \
+              -appimage \
+              -no-strip \
+              -exclude-libs=libGL,libGLX,libEGL,libOpenGL,libdrm,libva,libvdpau,libxcb,libxcb-glx,libxcb-dri2,libxcb-dri3,libX11,libXext,libXrandr,libXrender,libXfixes,libXau,libXdmcp
 
       - name: Upload Artifact (Linux)
         if: runner.os == 'Linux'
