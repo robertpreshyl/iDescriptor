@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repository
@@ -101,14 +101,13 @@ jobs:
       - name: Build with CMake
         run: cmake --build build --config Release
 
-      - name: Prepare AppDir
+      - name: Prepare for AppImage
+        if: runner.os == 'Linux'
         run: |
-          mkdir -p build/AppDir/usr/bin
-          mkdir -p build/AppDir/usr/share/applications
-          mkdir -p build/AppDir/usr/share/icons/hicolor/256x256/apps
-          mv build/iDescriptor build/AppDir/usr/bin/
-          cp resources/icons/app-icon/icon.png build/AppDir/usr/share/icons/hicolor/256x256/apps/iDescriptor.png
-          cat <<EOF > build/AppDir/usr/share/applications/iDescriptor.desktop
+          cp resources/icons/app-icon/icon.png build/iDescriptor.png
+
+          # Create a .desktop file required for the AppImage
+          cat <<EOF > build/iDescriptor.desktop
           [Desktop Entry]
           Name=iDescriptor
           Exec=iDescriptor
@@ -117,50 +116,29 @@ jobs:
           Categories=Utility;
           EOF
 
-      - name: Install appimagetool
+      - name: Install linuxdeployqt
+        if: runner.os == 'Linux'
         run: |
-          wget -c "https://github.com$(wget -q https://github.com/probonopd/go-appimage/releases/expanded_assets/continuous -O - | grep "appimagetool-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)"
-          chmod a+x appimagetool-*.AppImage
+          wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+          chmod a+x linuxdeployqt-continuous-x86_64.AppImage
 
       - name: Build AppImage
+        if: runner.os == 'Linux'
         working-directory: ./build
         run: |
-          # Qt version installed by the Install Qt step
-          QT_VERSION="6.7.2"
+          export VERSION=1.0.0
+          ../linuxdeployqt-continuous-x86_64.AppImage iDescriptor -appimage
 
-          # Try to find the Qt installation under known prefixes.
-          # The Install Qt step used `dir: ${{ github.workspace }}`, so Qt may be under
-          # $GITHUB_WORKSPACE/Qt/<version>/<arch> or under the default $RUNNER_WORKSPACE/Qt/<version>/<arch>.
-          QTDIR=""
-          for BASE in "${GITHUB_WORKSPACE:-}" "${RUNNER_WORKSPACE:-}"; do
-            if [ -n "$BASE" ] && [ -d "$BASE/Qt/$QT_VERSION" ]; then
-              ARCH_DIR="$(ls -d "$BASE/Qt/$QT_VERSION/"* 2>/dev/null | head -n1 || true)"
-              if [ -n "$ARCH_DIR" ]; then
-                ARCH="$(basename "$ARCH_DIR")"
-                QTDIR="$BASE/Qt/$QT_VERSION/$ARCH"
-                break
-              fi
-            fi
-          done
-
-          if [ -z "$QTDIR" ]; then
-            echo "Could not find Qt installation under $GITHUB_WORKSPACE/Qt/$QT_VERSION or $RUNNER_WORKSPACE/Qt/$QT_VERSION"
-            ls -la "${GITHUB_WORKSPACE%/}/Qt" 2>/dev/null || true
-            ls -la "${RUNNER_WORKSPACE%/}/Qt" 2>/dev/null || true
-            exit 1
-          fi
-
-          export QTDIR
-          export QT_ROOT_DIR="$QTDIR"
-          export PATH="$QTDIR/bin:$PATH"
-
-          echo "Using QTDIR=$QTDIR"
-
-          ../appimagetool-*.AppImage deploy AppDir/usr/share/applications/*.desktop
-          VERSION=1.0.0 ../appimagetool-*.AppImage AppDir
-
-      - name: Upload Artifact
+      - name: Upload Artifact (Linux)
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
-          name: iDescriptor-Linux
+          name: iDescriptor-AppImage
           path: build/iDescriptor-*.AppImage
+
+      - name: Upload Artifact (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: iDescriptor-Windows
+          path: build/Release/iDescriptor.exe
