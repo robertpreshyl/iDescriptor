@@ -50,6 +50,12 @@ jobs:
             libxkbcommon-x11-0 \
             libheif-dev
 
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: "6.7.2"
+          modules: "qtmultimedia qtlocation qtpositioning qtserialport"
+
       - name: Compile additional dependencies
         run: |
           git clone https://github.com/lxqt/lxqt-build-tools.git
@@ -65,12 +71,6 @@ jobs:
           cmake ..
           sudo make install
           popd
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: "6.7.2"
-          modules: "qtmultimedia qtlocation qtpositioning qtserialport"
 
       - name: Build libimobiledevice suite
         run: |
