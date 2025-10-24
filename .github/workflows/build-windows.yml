@@ -70,6 +70,7 @@ jobs:
           dotnet-version: "8.x"
 
       - name: Install WiX Toolset
+        shell: pwsh
         run: dotnet tool install --global wix
 
       - name: Download and Extract Bonjour SDK
