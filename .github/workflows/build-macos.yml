@@ -31,7 +31,8 @@ jobs:
 
       - name: Update pkgconfig path
         run: |
-          QT_PKGCFG="$HOME/Qt/${{ env.QT_VERSION }}/clang_64/lib/pkgconfig"
+          ls $HOME/Qt/${{ env.QT_VERSION }}
+          QT_PKGCFG="$HOME/Qt/${{ env.QT_VERSION }}/macos/lib/pkgconfig"
           echo "Computed QT_PKGCFG=${QT_PKGCFG}"
           echo "PKG_CONFIG_PATH=${QT_PKGCFG}:$PKG_CONFIG_PATH" >> $GITHUB_ENV
           ls -la "${QT_PKGCFG}" || true
