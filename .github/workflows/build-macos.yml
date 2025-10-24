@@ -24,6 +24,7 @@ jobs:
           token: ${{ secrets.PAT }}
 
       - name: Install Qt
+        id: install-qt # Add an ID to reference the output
         uses: jurplel/install-qt-action@v3
         with:
           version: ${{ env.QT_VERSION }}
@@ -31,8 +32,9 @@ jobs:
 
       - name: Update pkgconfig path
         run: |
-          echo "Qt root directory is: $QT_ROOT_DIR"
-          QT_PKGCFG="$QT_ROOT_DIR/lib/pkgconfig"
+          QT_PATH="${{ steps.install-qt.outputs.qtPath }}"
+          echo "Qt root directory from step output is: ${QT_PATH}"
+          QT_PKGCFG="${QT_PATH}/lib/pkgconfig"
           echo "Computed pkgconfig path: ${QT_PKGCFG}"
           echo "PKG_CONFIG_PATH=${QT_PKGCFG}:$PKG_CONFIG_PATH" >> $GITHUB_ENV
           ls -la "${QT_PKGCFG}" || true
