@@ -31,8 +31,7 @@ jobs:
 
       - name: Update pkgconfig path
         run: |
-          # show qmake to verify Qt6_DIR is correct
-          ls "${Qt6_DIR}/bin/" | grep qmake || true
+          ls "${Qt6_DIR}/lib/pkgconfig"
 
           # write KEY=VALUE lines to GITHUB_ENV (required format)
           echo "PKG_CONFIG_PATH=${Qt6_DIR}/lib/pkgconfig:${PKG_CONFIG_PATH:-}" >> "$GITHUB_ENV"
