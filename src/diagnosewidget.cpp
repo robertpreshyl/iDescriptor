@@ -386,6 +386,20 @@ void DiagnoseWidget::onInstallRequested(const QString &name)
 
         itemToInstall->setInstalling(true);
 
+        QString userName = qEnvironmentVariable("USER");
+        if (userName.isEmpty()) {
+            userName = qEnvironmentVariable("LOGNAME");
+        }
+
+        if (userName.isEmpty()) {
+            QMessageBox::critical(
+                this, "Error",
+                "Failed to determine the current user. Cannot "
+                "proceed with the installation.");
+            itemToInstall->setInstalling(false);
+            return;
+        }
+
         // Create a temporary script to set up udev rules
         QString scriptPath = QDir::temp().filePath("setup-idevice-udev.sh");
         QFile scriptFile(scriptPath);
@@ -401,16 +415,22 @@ void DiagnoseWidget::onInstallRequested(const QString &name)
         QTextStream out(&scriptFile);
         out << "#!/bin/bash\n";
         out << "set -e\n\n";
+        out << "USERNAME=$1\n\n";
+        out << "if [ -z \"$USERNAME\" ]; then\n";
+        out << "    echo \"Error: Username not provided.\" >&2\n";
+        out << "    exit 1\n";
+        out << "fi\n\n";
         out << "# Create udev rules file\n";
         out << "echo 'SUBSYSTEM==\"usb\", ATTR{idVendor}==\"05ac\", "
-               "MODE=\"0666\"' | tee /etc/udev/rules.d/99-idevice.rules > "
+               "MODE=\"0666\", GROUP=\"idevice\"' | tee "
+               "/etc/udev/rules.d/99-idevice.rules > "
                "/dev/null\n\n";
         out << "# Create idevice group if it doesn't exist\n";
         out << "if ! getent group idevice > /dev/null 2>&1; then\n";
         out << "    groupadd idevice\n";
         out << "fi\n\n";
         out << "# Add current user to idevice group\n";
-        out << "usermod -aG idevice $SUDO_USER\n\n";
+        out << "usermod -aG idevice \"$USERNAME\"\n\n";
         out << "# Reload udev rules\n";
         out << "udevadm control --reload-rules\n";
         out << "udevadm trigger\n\n";
@@ -458,7 +478,7 @@ void DiagnoseWidget::onInstallRequested(const QString &name)
             });
 
         QStringList args;
-        args << scriptPath;
+        args << scriptPath << userName;
         installProcess->start("pkexec", args);
     }
 #endif
