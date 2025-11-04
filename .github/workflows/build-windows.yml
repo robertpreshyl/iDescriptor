@@ -82,6 +82,10 @@ jobs:
         shell: pwsh
         run: dotnet tool install --global wix --version 6.0.2
 
+      - name: Add .NET tools to PATH
+        shell: pwsh
+        run: echo "$($env:USERPROFILE)\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: Download and Extract Bonjour SDK
         run: |
           wget "https://github.com/tempx-x/bonjour-sdk/raw/refs/heads/main/bonjoursdksetup.exe" -O bonjour-sdk.exe
@@ -191,7 +195,6 @@ jobs:
         working-directory: build
         shell: bash
         run: |
-          export PATH="$PATH:/c/Users/runneradmin/.dotnet/tools"
           cmake --install .
           cpack .
 
@@ -200,3 +203,10 @@ jobs:
         with:
           name: iDescriptor-Windows-Installer
           path: build/artifacts/*
+
+      - name: Upload CPack Logs on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpack-logs
+          path: build/_CPack_Packages/win64/WIX/wix.log
