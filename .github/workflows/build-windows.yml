@@ -73,13 +73,16 @@ jobs:
           $env:PATH = "$wixToolDir;$env:PATH"
           "PATH=$wixToolDir;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-          # Install the UI extension (user-level)
-          wix extension add WixToolset.UI.wixext/4.0.5
-          wix extension list
+          # Install the UI extension
+          & "$wixToolDir\wix.exe" extension add WixToolset.UI.wixext/4.0.5
+          & "$wixToolDir\wix.exe" extension list
 
           # Set environment vars for CPack
           "WIX=$(Join-Path $wixToolDir 'wix.exe')" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "WIX_EXTENSIONS=$env:USERPROFILE\.wix\extensions" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          # Set the extensions path for CMake/CPack
+          $extensionsPath = Join-Path $env:USERPROFILE ".wix\extensions"
+          "CPACK_WIX_EXTENSIONS=$extensionsPath" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Set PKG_CONFIG environment variable
         run: echo "PKG_CONFIG_EXECUTABLE=C:/msys64/mingw64/bin/pkg-config.exe" >> $GITHUB_ENV
