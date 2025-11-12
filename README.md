@@ -45,7 +45,7 @@
 ### Tools
 | Feature                                                          | Status               | Notes                                                                                       |
 | ---------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------- |
-| AirPlay Mirroring                                                 | ✅ Implemented       | Cast your device screen to your computer.                                                   |
+| [AirPlay](#airplay)                          | ✅ Implemented       | Cast your device screen to your computer.                                                   |
 | [Download & Install Apps From Apple Store](#app-store)            | ✅ Implemented       | Download and install apps directly from the Apple Store.                                    |
 | [Virtual Location](#virtual-location)                             | ✅ Implemented       | Simulate GPS location. Requires a mounted Developer Disk Image. **( iOS 6 - iOS 16)**       |
 | [iFuse Filesystem Mount](#ifuse-filesystem-mount)                 | ✅ Implemented       | Mount the device's filesystem. (Windows & Linux only)                                       |
@@ -56,15 +56,15 @@
 | [Network Device Discovery](#network-device-discovery)             | ✅ Implemented       | Discover and monitor devices on your local network.                                         |
 | [SSH Terminal](#ssh-terminal)  **(Jailbroken)**                   | ✅ Implemented       | Open up a terminal on your iDevice.                                                          |
 | Query MobileGestalt                                               | ✅ Implemented       | Read detailed hardware and software information from the device.                            |
-| Live Screen                                                       | ✅ Implemented       | View your device's screen in real-time **(wired)**.                                         |
+| [Live Screen](#live-screen)                                                       | ✅ Implemented       | View your device's screen in real-time **(wired)**.                                         |
 | Developer Disk Images                                             | ✅ Implemented       | Manage and mount developer disk images. **( iOS 6 - iOS 16)**                               |
 
 ### Device Actions
 | Feature                     | Status               | Notes                                                                                       |
 | --------------------------- | -------------------- | ------------------------------------------------------------------------------------------- |
-| Restart Device              | ✅ Implemented       |                                                                                             |
-| Shutdown Device             | ✅ Implemented       |                                                                                             |
-| Enter Recovery Mode         | ✅ Implemented       |                                                                                             |
+| Restart Device              | ✅ Implemented       |   -                                                                                          |
+| Shutdown Device             | ✅ Implemented       |    -                                                                                         |
+| Enter Recovery Mode         | ✅ Implemented       |     -                                                                                        |
 
 ## Fully Theme Aware
 <p align="center">
@@ -72,6 +72,13 @@
 </p>
 <p align="center">
     <img src="./resources/repo/ubuntu-theme.gif"><br/>
+</p>
+
+## AirPlay
+### Cast your device screen to your computer!
+
+<p align="center">
+    <img src="./resources/repo/airplay.gif"><br/>
 </p>
 
 ## App Store
@@ -137,7 +144,13 @@ Literally mount your iDevice filesystem and use it as a regular drive , read and
     <img src="./resources/repo/ssh-terminal.gif"><br/>
 </p>
 
+## Live Screen
 
+Useful if your device does not support AirPlay
+
+<p align="center">
+    <img src="./resources/repo/live-screen.png"><br/>
+</p>
 
 ## **Authentication Required** ?
 
