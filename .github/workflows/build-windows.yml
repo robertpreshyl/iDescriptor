@@ -195,15 +195,14 @@ jobs:
           cmake --install .
           cpack .
 
-      - name: Upload Artifact
+      - name: Upload Installer Artifact
         uses: actions/upload-artifact@v4
         with:
           name: iDescriptor-Windows-Installer
-          path: build/artifacts/*
+          path: build/artifacts/*.msi
 
-      - name: Upload CPack Logs on Failure
-        if: failure()
+      - name: Upload Portable ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cpack-logs
-          path: build/_CPack_Packages/win64/WIX/wix.log
+          name: iDescriptor-Windows-Portable
+          path: build/artifacts/*.zip
