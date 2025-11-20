@@ -131,9 +131,13 @@ if(ENABLE_RECOVERY_DEVICE_SUPPORT)
         NAMES irecovery-1.0
         PATHS ${CUSTOM_LIB_PATH}
         NO_DEFAULT_PATH
-        REQUIRED
     )
-    message(STATUS "Recovery device support enabled")
+    if(IRECOVERY_LIBRARY)
+        message(STATUS "Building with recovery device support enabled")
+    else()
+        message(WARNING "libirecovery not found. Recovery device support will be disabled. This is to be expected if you are installing from Arch AUR.")
+        set(ENABLE_RECOVERY_DEVICE_SUPPORT OFF)
+    endif()
 else()
     message(STATUS "Recovery device support disabled")
 endif()
@@ -353,11 +357,16 @@ set_target_properties(iDescriptor PROPERTIES
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
-    # Control library search order - system libs first, then /usr/local/lib
-    INSTALL_RPATH "/usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:$ORIGIN"
     BUILD_WITH_INSTALL_RPATH TRUE
 )
 if (UNIX AND NOT APPLE)
+    # Required on Linux to find libirecovery-1.0.so.5 at runtime
+    if (ENABLE_RECOVERY_DEVICE_SUPPORT)
+    set_target_properties(iDescriptor PROPERTIES
+        # Control library search order - system libs first, then /usr/local/lib
+        INSTALL_RPATH "/usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:$ORIGIN"
+    )
+    endif()
 # Add install rules for the project
 include(GNUInstallDirs)
 
@@ -450,8 +459,8 @@ set(CPACK_OUTPUT_FILE_PREFIX "${CMAKE_BINARY_DIR}/artifacts")
 
 if(WIN32)
     set(CPACK_GENERATOR "WIX;ZIP")
-
-    set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}-Windows_x86_64")
+    # FIXME: arm64 build support
+    set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}-v${PROJECT_VERSION}-Windows_x86_64")
 
     set(CPACK_PACKAGE_INSTALL_DIRECTORY "${PROJECT_NAME}")
 
@@ -462,7 +471,7 @@ if(WIN32)
     set(CPACK_WIX_UI_BANNER "${CMAKE_CURRENT_SOURCE_DIR}/resources/installer/banner.bmp")
     set(CPACK_WIX_UI_DIALOG "${CMAKE_CURRENT_SOURCE_DIR}/resources/installer/dialog.bmp")
 
-    set(CPACK_WIX_PROPERTY_ARPCOMMENTS " Cross platform, open-source and free idevice management tool written in C++.")
+    set(CPACK_WIX_PROPERTY_ARPCOMMENTS "Cross platform, open-source and free idevice management tool written in C++.")
     set(CPACK_WIX_PROPERTY_ARPHELPLINK "${CPACK_PACKAGE_CONTACT}/issues")
     set(CPACK_WIX_PROPERTY_ARPURLINFOABOUT "${CPACK_PACKAGE_CONTACT}")
     set(CPACK_WIX_PROPERTY_ARPURLUPDATEINFO "${CPACK_PACKAGE_CONTACT}/releases")
