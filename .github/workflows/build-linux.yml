@@ -130,7 +130,7 @@ jobs:
             url="${base_url}/${name}/releases/download/${ver}/${archive}"
             echo "=== Processing $name $ver ==="
             echo "URL: $url"
-            curl -L -o "$archive" "$url"
+            curl --retry 3 --retry-delay 5 -L -o "$archive" "$url"
 
             echo "Extracting $archive"
             tar xjf "$archive"
