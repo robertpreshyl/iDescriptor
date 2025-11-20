@@ -57,7 +57,6 @@ private:
     void addRecoveryDevice(const iDescriptorRecoveryDevice *device);
     void removeRecoveryDevice(uint64_t ecid);
 #endif
-    // TODO:udid or uuid ?
     void addPendingDevice(const QString &udid, bool locked);
     void addPairedDevice(iDescriptorDevice *device);
     void removePendingDevice(const QString &udid);

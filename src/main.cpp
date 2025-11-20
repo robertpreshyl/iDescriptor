@@ -22,6 +22,7 @@
 #include <QApplication>
 #include <QDebug>
 #include <QDir>
+#include <QMessageBox>
 #include <QStyleFactory>
 #include <QtGlobal>
 #include <stdlib.h>

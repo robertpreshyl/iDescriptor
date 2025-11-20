@@ -179,11 +179,10 @@ void DevDiskImagesWidget::displayImages()
 {
     m_imageListWidget->clear();
 
-    // Get device version for compatibility checking
     int deviceMajorVersion = 0;
     int deviceMinorVersion = 0;
     bool hasConnectedDevice = false;
-    // todo wtf is this
+
     if (m_currentDevice && m_currentDevice->device) {
         unsigned int device_version =
             idevice_get_device_version(m_currentDevice->device);

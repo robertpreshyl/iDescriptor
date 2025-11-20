@@ -43,13 +43,6 @@
 #endif
 #include <QDebug>
 
-// TODO: check for these
-//  if (device_version >= IDEVICE_DEVICE_VERSION(17,0,0)) {
-//  		printf("Note: This tool is currently not supported on iOS 17+\n");
-//  	} else {
-//  		printf("Make sure a developer disk image is mounted!\n");
-//  	}
-
 enum { SET_LOCATION = 0, RESET_LOCATION = 1 };
 bool set_location(idevice_t device, char *lat, char *lon)
 {
