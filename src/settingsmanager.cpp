@@ -50,9 +50,12 @@ void SettingsManager::showSettingsDialog()
 SettingsManager::SettingsManager(QObject *parent) : QObject{parent}
 {
     m_settings = new QSettings(this);
+}
 
-    // Clean up any invalid favorite places on startup
-    // cleanupFavoritePlaces();
+void SettingsManager::clear()
+{
+    m_settings->clear();
+    m_settings->sync();
 }
 
 QString SettingsManager::devdiskimgpath() const

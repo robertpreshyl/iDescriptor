@@ -95,6 +95,7 @@ public:
     // Reset to defaults
     void resetToDefaults();
 
+    void clear();
 signals:
     void favoritePlacesChanged();
     void recentLocationsChanged();

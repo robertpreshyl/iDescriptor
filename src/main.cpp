@@ -18,6 +18,7 @@
  */
 
 #include "mainwindow.h"
+#include "settingsmanager.h"
 #include <QApplication>
 #include <QDebug>
 #include <QDir>
@@ -31,6 +32,16 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    QCoreApplication::setOrganizationName("iDescriptor");
+    QCoreApplication::setApplicationName("iDescriptor");
+    QCoreApplication::setApplicationVersion(APP_VERSION);
+
+    if (a.arguments().contains("--reset-settings")) {
+        SettingsManager::sharedInstance()->clear();
+        QMessageBox::information(nullptr, "Settings Reset",
+                                 "All application settings have been reset to "
+                                 "their default values.");
+    }
 #ifdef WIN32
     QString appPath = QCoreApplication::applicationDirPath();
     QString gstPluginPath =
@@ -66,9 +77,6 @@ int main(int argc, char *argv[])
     setenv("GST_PLUGIN_SYSTEM_PATH", gstPluginPath.toUtf8().constData(), 1);
     setenv("GST_PLUGIN_SCANNER", gstPluginScannerPath.toUtf8().constData(), 1);
 #endif
-    QCoreApplication::setOrganizationName("iDescriptor");
-    QCoreApplication::setApplicationName("iDescriptor");
-    QCoreApplication::setApplicationVersion(APP_VERSION);
 #ifndef __APPLE__
     QApplication::setStyle(QStyleFactory::create("Fusion"));
 #endif
