@@ -18,6 +18,7 @@
  */
 
 #include "ifusewidget.h"
+#include "diagnosedialog.h"
 #include "iDescriptor-ui.h"
 #include "iDescriptor.h"
 #include "ifusediskunmountbutton.h"
@@ -28,6 +29,9 @@
 #include <QStandardPaths>
 #include <QStatusBar>
 #include <QTimer>
+#ifdef WIN32
+#include "platform/windows/check_deps.h"
+#endif
 
 iFuseWidget::iFuseWidget(iDescriptorDevice *device, QWidget *parent)
     : QWidget(parent), m_mainLayout(nullptr), m_ifuseProcess(nullptr),
@@ -124,6 +128,14 @@ void iFuseWidget::setupUI()
         QString::fromStdString(m_device->deviceInfo.productType);
     QString defaultMountPath = QDir(homeDir).absoluteFilePath(productType);
     m_mountPathLabel->setText(defaultMountPath);
+
+#ifdef WIN32
+    if (!IsWinFspInstalled()) {
+        DiagnoseDialog *diagnoseDialog = new DiagnoseDialog(this);
+        diagnoseDialog->setAttribute(Qt::WA_DeleteOnClose);
+        diagnoseDialog->show();
+    }
+#endif
 }
 
 void iFuseWidget::updateDeviceComboBox()
