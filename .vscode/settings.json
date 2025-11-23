@@ -202,16 +202,6 @@
     "qimage": "cpp",
     "qabstractbutton": "cpp",
     "qtnetwork": "cpp",
-    "qtcore": "cpp",
-    "qframe": "cpp",
-    "qevent": "cpp",
-    "qeventloop": "cpp",
-    "qregularexpression": "cpp",
-    "qbytearray": "cpp",
-    "qrandomgenerator": "cpp",
-    "qwheelevent": "cpp",
-    "qnetworkaccessmanager": "cpp",
-    "qmap": "cpp",
-    "qstylefactory": "cpp"
+    "qtcore": "cpp"
   }
 }
