@@ -11,3 +11,10 @@ build-dir
 *.exe
 *.dll
 devdiskimgs
+
+# AI/Development artifacts
+prompt.md
+*prompt*.md
+.cursor/
+.vscode/
+*.ai.md
